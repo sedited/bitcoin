@@ -135,3 +135,20 @@ install(TARGETS bitcoinkernel
 )
 
 install(FILES bitcoinkernel.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT libbitcoinkernel)
+
+add_executable(bitcoin-linearize-blocks
+  linearize_blocks.cpp
+)
+
+add_windows_application_manifest(bitcoin-linearize-blocks)
+
+target_link_libraries(bitcoin-linearize-blocks
+  PRIVATE
+    core_interface
+    bitcoin_common
+    bitcoinkernel
+)
+
+set_target_properties(bitcoin-linearize-blocks PROPERTIES
+  SKIP_BUILD_RPATH OFF
+)
