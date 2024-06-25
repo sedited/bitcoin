@@ -11,8 +11,6 @@
 #include <cassert>
 #include <charconv>
 #include <iostream>
-#include <fstream>
-#include <vector>
 #include <string>
 #include <string_view>
 
@@ -61,10 +59,13 @@ std::unique_ptr<ChainMan> create_chainman(fs::path path_root,
                                           fs::path path_blocks,
                                           bool block_tree_db_in_memory,
                                           bool chainstate_db_in_memory,
+                                          std::optional<uint64_t> max_blockfile_size,
                                           Context& context)
 {
     ChainstateManagerOptions chainman_opts{context, fs::PathToString(path_root), fs::PathToString(path_blocks)};
-
+    if (max_blockfile_size.has_value()) {
+        chainman_opts.SetMaxBlockfileSize(max_blockfile_size.value());
+    }
     if (block_tree_db_in_memory) {
         chainman_opts.UpdateBlockTreeDbInMemory(block_tree_db_in_memory);
     }
@@ -89,18 +90,6 @@ std::optional<btck::ChainType> string_to_chain_type(const std::string& chainType
     }
 }
 
-template<typename T>
-std::optional<T> parse_arg(const char* arg) {
-    T value;
-    std::string_view sv{arg};
-    auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), value);
-    if (ec == std::errc()) {
-        return value;
-    }
-    std::cerr << "Error: invalid numeric argument" << std::endl;
-    return std::nullopt;
-}
-
 int main(int argc, char* argv[]) {
     ArgsManager args;
     SetupHelpOptions(args);
@@ -110,7 +99,7 @@ int main(int argc, char* argv[]) {
     args.AddArg("-chain=<chain>", "Chain type: mainnet, testnet, signet, regtest (default: mainnet)", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
     args.AddArg("-startheight=<n>", "Start height (default: 0)", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
     args.AddArg("-endheight=<n>", "End height (default: chain tip)", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
-    args.AddArg("-singlefile=<n>", "Whether to create a single block file (0 for no, 1 for yes)", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    args.AddArg("-maxblockfilesize=<n>", "Max block file size in bytes (default: 128 MiB)",                           ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
 
     std::string error;
     if (!args.ParseParameters(argc, argv, error)) {
@@ -140,10 +129,16 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: invalid chain type '" << chain_type_str << "'. Valid values: mainnet, testnet, signet, regtest" << std::endl;
         return 1;
     }
-    auto single_file = args.GetBoolArg("singlefile", false);
 
     int32_t start_height = args.GetIntArg("-startheight", 0);
     int32_t end_height = args.GetIntArg("-endheight", -1);
+
+    constexpr uint64_t MAX_BLOCKFILE_SIZE{0x8000000}; // 128 MiB
+    uint64_t max_blockfile_size = (uint64_t)args.GetIntArg("-maxblockfilesize", 0x8000000);
+    if (max_blockfile_size < MAX_BLOCKFILE_SIZE) {
+        std::cerr << "Error: -maxblockfilesize must be at least " << MAX_BLOCKFILE_SIZE << " (128 MiB)" << std::endl;
+        return 1;
+    }
 
     btck_LoggingOptions logging_options = {
         .log_timestamps = true,
@@ -160,7 +155,7 @@ int main(int argc, char* argv[]) {
     auto notifications{std::make_shared<LinearizeKernelNotifications>()};
     auto context = create_context(notifications, *maybe_chain_type);
 
-    auto chainman_in = create_chainman(in_path, in_path / "blocks", false, false, context);
+    auto chainman_in = create_chainman(in_path, in_path / "blocks", false, false, std::nullopt, context);
 
     auto tip_height = chainman_in->GetChain().Height();
     if (start_height < 0 || start_height > tip_height) {
@@ -176,13 +171,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    auto chainman_out = create_chainman(out_path, out_path / "blocks", true, true, context);
+    auto chainman_out = create_chainman(out_path, out_path / "blocks", true, true, max_blockfile_size, context);
 
     std::cout << "In path: " << in_path
               << " , out path: " << out_path
               << " , start height: " << start_height
               << " , end height: " << end_height
-              << " , single file: " << single_file
+              << " , max block file size: " << max_blockfile_size
               << std::endl;
 
     auto chain = chainman_in->GetChain();
@@ -196,46 +191,6 @@ int main(int argc, char* argv[]) {
         if (height % 100 == 0) std::cout << "Writing block at height: " << height << std::endl;
         chainman_out->WriteBlockToDisk(block, height);
     }
-
-    if (!single_file) return 0;
-
-    // Collect and sort all blk*.dat filenames
-    std::vector<std::string> files;
-    for (const auto& entry : fs::directory_iterator(out_path)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".dat" && entry.path().filename().string().starts_with("blk")) {
-            files.push_back(entry.path());
-        }
-    }
-    std::sort(files.begin(), files.end());
-
-    fs::path output_filename = out_path / "blk-merged.dat"; // Output file name
-
-    std::ofstream output_file(fs::PathToString(output_filename), std::ios::binary);
-    if (!output_file.is_open()) {
-        std::cerr << "Failed to open output file: " << output_filename << std::endl;
-        return 1;
-    }
-
-    for (const std::string& filename : files) {
-        std::ifstream inputFile(filename, std::ios::binary);
-        if (!inputFile.is_open()) {
-            std::cerr << "Failed to open input file: " << filename << std::endl;
-            continue;
-        }
-        output_file << inputFile.rdbuf();
-
-        std::cout << "Merged and deleting: " << filename << std::endl;
-
-        inputFile.close();
-
-        if (fs::remove(filename)) {
-            std::cout << "Deleted: " << filename << std::endl;
-        } else {
-            std::cerr << "Failed to delete: " << filename << std::endl;
-        }
-    }
-
-    output_file.close();
 
     return 0;
 }
