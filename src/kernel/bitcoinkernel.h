@@ -1268,6 +1268,19 @@ BITCOINKERNEL_API int BITCOINKERNEL_WARN_UNUSED_RESULT btck_chain_contains(
 ///@{
 
 /**
+ * @brief Write a block to disk.
+ *
+ * @param[in] chainstate_manager Non-null.
+ * @param[in] block              Non-null.
+ * @param[in] height             The height of the block we are writing.
+ */
+void btck_write_block_to_disk(
+    btck_ChainstateManager* chainstate_manager,
+    btck_Block* block,
+    int height
+) BITCOINKERNEL_ARG_NONNULL(1) BITCOINKERNEL_ARG_NONNULL(2);
+
+/**
  * @brief Reads the block spent coins data the passed in block tree entry points to from
  * disk and returns it.
  *

@@ -1161,6 +1161,14 @@ btck_BlockSpentOutputs* btck_block_spent_outputs_read(const btck_ChainstateManag
     return btck_BlockSpentOutputs::create(block_undo);
 }
 
+void btck_write_block_to_disk(
+    btck_ChainstateManager* chainman,
+    btck_Block* block,
+    int height)
+{
+    btck_ChainstateManager::get(chainman).m_chainman->m_blockman.WriteBlock(*btck_Block::get(block), height);
+}
+
 btck_BlockSpentOutputs* btck_block_spent_outputs_copy(const btck_BlockSpentOutputs* block_spent_outputs)
 {
     return btck_BlockSpentOutputs::copy(block_spent_outputs);

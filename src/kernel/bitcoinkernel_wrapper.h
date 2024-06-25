@@ -1151,6 +1151,11 @@ public:
     {
         return btck_block_spent_outputs_read(get(), entry.get());
     }
+
+    void WriteBlockToDisk(Block& block, int height)
+    {
+        btck_write_block_to_disk(get(), block.get(), height);
+    }
 };
 
 } // namespace btck
