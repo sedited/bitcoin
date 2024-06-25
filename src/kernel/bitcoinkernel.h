@@ -998,6 +998,17 @@ BITCOINKERNEL_API int BITCOINKERNEL_WARN_UNUSED_RESULT btck_chainstate_manager_o
     int wipe_chainstate_db) BITCOINKERNEL_ARG_NONNULL(1);
 
 /**
+ * @brief Sets the max block file size to be used when persisting blocks.
+ *
+ * @param[in] chainstate_manager_options Non-null, created with kernel_chainstate_manager_options_create.
+ * @param[in] max_block_file_size        Set the maximum block file size.
+ */
+void btck_chainstate_manager_options_set_max_block_file_size(
+    btck_ChainstateManagerOptions* chainstate_manager_options,
+    uint64_t max_block_file_size
+) BITCOINKERNEL_ARG_NONNULL(1);
+
+/**
  * @brief Sets block tree db in memory in the options.
  *
  * @param[in] chainstate_manager_options   Non-null, created by @ref btck_chainstate_manager_options_create.

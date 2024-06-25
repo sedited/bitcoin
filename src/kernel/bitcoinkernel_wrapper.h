@@ -958,6 +958,11 @@ public:
         return btck_chainstate_manager_options_set_wipe_dbs(get(), wipe_block_tree, wipe_chainstate) == 0;
     }
 
+    void SetMaxBlockfileSize(uint64_t max_blockfile_size)
+    {
+        btck_chainstate_manager_options_set_max_block_file_size(get(), max_blockfile_size);
+    }
+
     void UpdateBlockTreeDbInMemory(bool block_tree_db_in_memory)
     {
         btck_chainstate_manager_options_update_block_tree_db_in_memory(get(), block_tree_db_in_memory);
