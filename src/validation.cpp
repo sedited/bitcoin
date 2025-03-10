@@ -1885,6 +1885,7 @@ Chainstate::Chainstate(
       m_notifications(chainman.m_options.notifications),
       m_chain_stats(chainman.m_chain_stats),
       m_signals(chainman.m_options.signals),
+      m_script_check_queue(chainman.m_script_check_queue),
       m_blockman(blockman),
       m_chainman(chainman),
       m_interrupt(chainman.m_interrupt),
@@ -2558,7 +2559,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     // doesn't invalidate pointers into the vector, and keep txsdata in scope
     // for as long as `control`.
     std::optional<CCheckQueueControl<CScriptCheck>> control;
-    if (auto& queue = m_chainman.GetCheckQueue(); queue.HasThreads() && fScriptChecks) control.emplace(queue);
+    if (auto& queue = m_script_check_queue; queue.HasThreads() && fScriptChecks) control.emplace(queue);
 
     std::vector<PrecomputedTransactionData> txsdata(block.vtx.size());
 

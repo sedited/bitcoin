@@ -592,6 +592,9 @@ protected:
 
     ValidationSignals* m_signals;
 
+    //! A queue for script verifications that have to be performed by worker threads.
+    CCheckQueue<CScriptCheck>& m_script_check_queue;
+
 public:
     //! Reference to a BlockManager instance which itself is shared across all
     //! Chainstate instances.
@@ -1350,8 +1353,6 @@ public:
     //! best header is no longer valid / guaranteed to be the most-work
     //! header in our block-index not known to be invalid, recalculate it.
     void RecalculateBestHeader() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
-
-    CCheckQueue<CScriptCheck>& GetCheckQueue() { return m_script_check_queue; }
 
     ~ChainstateManager();
 
