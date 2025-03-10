@@ -2957,7 +2957,7 @@ void Chainstate::UpdateTip(const CBlockIndex* pindexNew)
 
     std::vector<bilingual_str> warning_messages;
     if (!m_chainman.IsInitialBlockDownload()) {
-        auto bits = m_chainman.m_versionbitscache.CheckUnknownActivations(pindexNew, m_chainparams);
+        auto bits = m_versionbitscache.CheckUnknownActivations(pindexNew, m_chainparams);
         for (auto [bit, active] : bits) {
             const bilingual_str warning = strprintf(_("Unknown new rules activated (versionbit %i)"), bit);
             if (active) {
