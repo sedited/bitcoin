@@ -1271,7 +1271,7 @@ static void SoftForkDescPushBack(const CBlockIndex* blockindex, UniValue& softfo
     rv.pushKV("type", "buried");
     // getdeploymentinfo reports the softfork as active from when the chain height is
     // one below the activation height
-    rv.pushKV("active", DeploymentActiveAfter(blockindex, chainman, dep));
+    rv.pushKV("active", DeploymentActiveAfter(blockindex, chainman.GetConsensus(), chainman.m_versionbitscache, dep));
     rv.pushKV("height", chainman.GetConsensus().DeploymentHeight(dep));
     softforks.pushKV(DeploymentName(dep), std::move(rv));
 }

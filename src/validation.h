@@ -1350,9 +1350,9 @@ public:
 
 /** Deployment* info via ChainstateManager */
 template<typename DEP>
-bool DeploymentActiveAfter(const CBlockIndex* pindexPrev, const ChainstateManager& chainman, DEP dep)
+bool DeploymentActiveAfter(const CBlockIndex* pindexPrev, const Consensus::Params& params, VersionBitsCache& versionbitscache, DEP dep)
 {
-    return DeploymentActiveAfter(pindexPrev, chainman.GetConsensus(), dep, chainman.m_versionbitscache);
+    return DeploymentActiveAfter(pindexPrev, params, dep, versionbitscache);
 }
 
 template<typename DEP>
