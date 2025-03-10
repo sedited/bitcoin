@@ -1356,15 +1356,15 @@ bool DeploymentActiveAfter(const CBlockIndex* pindexPrev, const Consensus::Param
 }
 
 template<typename DEP>
-bool DeploymentActiveAt(const CBlockIndex& index, const ChainstateManager& chainman, DEP dep)
+bool DeploymentActiveAt(const CBlockIndex& index, const Consensus::Params& params, VersionBitsCache& versionbitscache, DEP dep)
 {
-    return DeploymentActiveAt(index, chainman.GetConsensus(), dep, chainman.m_versionbitscache);
+    return DeploymentActiveAt(index, params, dep, versionbitscache);
 }
 
 template<typename DEP>
-bool DeploymentEnabled(const ChainstateManager& chainman, DEP dep)
+bool DeploymentEnabled(const Consensus::Params& params, DEP dep)
 {
-    return DeploymentEnabled(chainman.GetConsensus(), dep);
+    return DeploymentEnabled(params, dep);
 }
 
 /** Identifies blocks that overwrote an existing coinbase output in the UTXO set (see BIP30) */
