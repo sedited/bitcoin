@@ -486,7 +486,9 @@ bool BlockManager::LoadBlockIndex(const std::optional<uint256>& snapshot_blockha
         if (pindex->pprev) {
             pindex->BuildSkip();
         }
-
+        if (pindex->nStatus & BLOCK_FAILED_MASK && (!m_best_invalid || pindex->nChainWork > m_best_invalid->nChainWork)) {
+            m_best_invalid = pindex;
+        }
         if (pindex->IsValid(BLOCK_VALID_TREE) && (m_best_header == nullptr || CBlockIndexWorkComparator()(m_best_header, pindex))) {
             m_best_header = pindex;
         }

@@ -1999,7 +1999,7 @@ void Chainstate::CheckForkWarningConditions()
         return;
     }
 
-    if (m_chainman.m_best_invalid && m_chainman.m_best_invalid->nChainWork > m_chain.Tip()->nChainWork + (GetBlockProof(*m_chain.Tip()) * 6)) {
+    if (m_blockman.m_best_invalid && m_blockman.m_best_invalid->nChainWork > m_chain.Tip()->nChainWork + (GetBlockProof(*m_chain.Tip()) * 6)) {
         LogWarning("Found invalid chain more than 6 blocks longer than our best chain. This could be due to database corruption or consensus incompatibility with peers.");
         m_notifications.warningSet(
             kernel::Warning::LARGE_WORK_INVALID_CHAIN,
@@ -2013,8 +2013,8 @@ void Chainstate::CheckForkWarningConditions()
 void Chainstate::InvalidChainFound(CBlockIndex* pindexNew)
 {
     AssertLockHeld(cs_main);
-    if (!m_chainman.m_best_invalid || pindexNew->nChainWork > m_chainman.m_best_invalid->nChainWork) {
-        m_chainman.m_best_invalid = pindexNew;
+    if (!m_blockman.m_best_invalid || pindexNew->nChainWork > m_blockman.m_best_invalid->nChainWork) {
+        m_blockman.m_best_invalid = pindexNew;
     }
     SetBlockFailureFlags(pindexNew);
     if (m_blockman.m_best_header != nullptr && m_blockman.m_best_header->GetAncestor(pindexNew->nHeight) == pindexNew) {
@@ -3226,8 +3226,8 @@ CBlockIndex* Chainstate::FindMostWorkChain()
             bool fMissingData = !(pindexTest->nStatus & BLOCK_HAVE_DATA);
             if (fFailedChain || fMissingData) {
                 // Candidate chain is not usable (either invalid or missing data)
-                if (fFailedChain && (m_chainman.m_best_invalid == nullptr || pindexNew->nChainWork > m_chainman.m_best_invalid->nChainWork)) {
-                    m_chainman.m_best_invalid = pindexNew;
+                if (fFailedChain && (m_blockman.m_best_invalid == nullptr || pindexNew->nChainWork > m_blockman.m_best_invalid->nChainWork)) {
+                    m_blockman.m_best_invalid = pindexNew;
                 }
                 CBlockIndex *pindexFailed = pindexNew;
                 // Remove the entire chain from the set.
@@ -3806,9 +3806,9 @@ void Chainstate::ResetBlockFailureFlags(CBlockIndex *pindex) {
             if (block_index.IsValid(BLOCK_VALID_TRANSACTIONS) && block_index.HaveNumChainTxs() && setBlockIndexCandidates.value_comp()(m_chain.Tip(), &block_index)) {
                 setBlockIndexCandidates.insert(&block_index);
             }
-            if (&block_index == m_chainman.m_best_invalid) {
+            if (&block_index == m_blockman.m_best_invalid) {
                 // Reset invalid block marker if it was pointing to one of those.
-                m_chainman.m_best_invalid = nullptr;
+                m_blockman.m_best_invalid = nullptr;
             }
         }
     }
@@ -5003,9 +5003,6 @@ bool ChainstateManager::LoadBlockIndex()
                 for (const auto& chainstate : m_chainstates) {
                     chainstate->TryAddBlockIndexCandidate(pindex);
                 }
-            }
-            if (pindex->nStatus & BLOCK_FAILED_MASK && (!m_best_invalid || pindex->nChainWork > m_best_invalid->nChainWork)) {
-                m_best_invalid = pindex;
             }
         }
     }
