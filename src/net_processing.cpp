@@ -692,7 +692,7 @@ private:
         EXCLUSIVE_LOCKS_REQUIRED(!peer.m_headers_sync_mutex, !m_peer_mutex, !m_headers_presync_mutex, g_msgproc_mutex);
 
     /** Return true if the given header is an ancestor of
-     *  m_chainman.m_best_header or our current tip */
+     *  m_chainman.m_blockman.m_best_header or our current tip */
     bool IsAncestorOfBestHeaderOrTip(const CBlockIndex* header) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     /** Request further headers from this peer with a given locator.
@@ -1840,9 +1840,9 @@ bool PeerManagerImpl::BlockRequestAllowed(const CBlockIndex* pindex)
 {
     AssertLockHeld(cs_main);
     if (m_chainman.ActiveChain().Contains(pindex)) return true;
-    return pindex->IsValid(BLOCK_VALID_SCRIPTS) && (m_chainman.m_best_header != nullptr) &&
-           (m_chainman.m_best_header->GetBlockTime() - pindex->GetBlockTime() < STALE_RELAY_AGE_LIMIT) &&
-           (GetBlockProofEquivalentTime(*m_chainman.m_best_header, *pindex, *m_chainman.m_best_header, m_chainparams.GetConsensus()) < STALE_RELAY_AGE_LIMIT);
+    return pindex->IsValid(BLOCK_VALID_SCRIPTS) && (m_chainman.m_blockman.m_best_header != nullptr) &&
+           (m_chainman.m_blockman.m_best_header->GetBlockTime() - pindex->GetBlockTime() < STALE_RELAY_AGE_LIMIT) &&
+           (GetBlockProofEquivalentTime(*m_chainman.m_blockman.m_best_header, *pindex, *m_chainman.m_blockman.m_best_header, m_chainparams.GetConsensus()) < STALE_RELAY_AGE_LIMIT);
 }
 
 util::Expected<void, std::string> PeerManagerImpl::FetchBlock(NodeId peer_id, const CBlockIndex& block_index)
@@ -2245,7 +2245,7 @@ void PeerManagerImpl::ProcessGetBlockData(CNode& pfrom, Peer& peer, const CInv& 
         }
         // disconnect node in case we have reached the outbound limit for serving historical blocks
         if (m_connman.OutboundTargetReached(true) &&
-            (((m_chainman.m_best_header != nullptr) && (m_chainman.m_best_header->GetBlockTime() - pindex->GetBlockTime() > HISTORICAL_BLOCK_AGE)) || inv.IsMsgFilteredBlk()) &&
+            (((m_chainman.m_blockman.m_best_header != nullptr) && (m_chainman.m_blockman.m_best_header->GetBlockTime() - pindex->GetBlockTime() > HISTORICAL_BLOCK_AGE)) || inv.IsMsgFilteredBlk()) &&
             !pfrom.HasPermission(NetPermissionFlags::Download) // nodes with the download permission may exceed target
         ) {
             LogDebug(BCLog::NET, "historical block serving limit reached, %s\n", pfrom.DisconnectMsg(fLogIPs));
@@ -2524,7 +2524,7 @@ void PeerManagerImpl::HandleUnconnectingHeaders(CNode& pfrom, Peer& peer,
         const std::vector<CBlockHeader>& headers)
 {
     // Try to fill in the missing headers.
-    const CBlockIndex* best_header{WITH_LOCK(cs_main, return m_chainman.m_best_header)};
+    const CBlockIndex* best_header{WITH_LOCK(cs_main, return m_chainman.m_blockman.m_best_header)};
     if (MaybeSendGetHeaders(pfrom, GetLocator(best_header), peer)) {
         LogDebug(BCLog::NET, "received header %s: missing prev block %s, sending getheaders (%d) to end (peer=%d)\n",
             headers[0].GetHash().ToString(),
@@ -2683,7 +2683,7 @@ bool PeerManagerImpl::IsAncestorOfBestHeaderOrTip(const CBlockIndex* header)
 {
     if (header == nullptr) {
         return false;
-    } else if (m_chainman.m_best_header != nullptr && header == m_chainman.m_best_header->GetAncestor(header->nHeight)) {
+    } else if (m_chainman.m_blockman.m_best_header != nullptr && header == m_chainman.m_blockman.m_best_header->GetAncestor(header->nHeight)) {
         return true;
     } else if (m_chainman.ActiveChain().Contains(header)) {
         return true;
@@ -4020,9 +4020,9 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type, 
             // use if we turned on sync with all peers).
             CNodeState& state{*Assert(State(pfrom.GetId()))};
             if (state.fSyncStarted || (!peer->m_inv_triggered_getheaders_before_sync && *best_block != m_last_block_inv_triggering_headers_sync)) {
-                if (MaybeSendGetHeaders(pfrom, GetLocator(m_chainman.m_best_header), *peer)) {
+                if (MaybeSendGetHeaders(pfrom, GetLocator(m_chainman.m_blockman.m_best_header), *peer)) {
                     LogDebug(BCLog::NET, "getheaders (%d) %s to peer=%d\n",
-                            m_chainman.m_best_header->nHeight, best_block->ToString(),
+                            m_chainman.m_blockman.m_best_header->nHeight, best_block->ToString(),
                             pfrom.GetId());
                 }
                 if (!state.fSyncStarted) {
@@ -4360,7 +4360,7 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type, 
         if (!prev_block) {
             // Doesn't connect (or is genesis), instead of DoSing in AcceptBlockHeader, request deeper headers
             if (!m_chainman.IsInitialBlockDownload()) {
-                MaybeSendGetHeaders(pfrom, GetLocator(m_chainman.m_best_header), *peer);
+                MaybeSendGetHeaders(pfrom, GetLocator(m_chainman.m_blockman.m_best_header), *peer);
             }
             return;
         } else if (prev_block->nChainWork + CalculateClaimedHeadersWork({{cmpctblock.header}}) < GetAntiDoSWorkThreshold()) {
@@ -5522,8 +5522,8 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
         CNodeState &state = *State(pto->GetId());
 
         // Start block sync
-        if (m_chainman.m_best_header == nullptr) {
-            m_chainman.m_best_header = m_chainman.ActiveChain().Tip();
+        if (m_chainman.m_blockman.m_best_header == nullptr) {
+            m_chainman.m_blockman.m_best_header = m_chainman.ActiveChain().Tip();
         }
 
         // Determine whether we might try initial headers sync or parallel
@@ -5549,14 +5549,14 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
 
         if (!state.fSyncStarted && CanServeBlocks(*peer) && !m_chainman.m_blockman.LoadingBlocks()) {
             // Only actively request headers from a single peer, unless we're close to today.
-            if ((nSyncStarted == 0 && sync_blocks_and_headers_from_peer) || m_chainman.m_best_header->Time() > NodeClock::now() - 24h) {
-                const CBlockIndex* pindexStart = m_chainman.m_best_header;
+            if ((nSyncStarted == 0 && sync_blocks_and_headers_from_peer) || m_chainman.m_blockman.m_best_header->Time() > NodeClock::now() - 24h) {
+                const CBlockIndex* pindexStart = m_chainman.m_blockman.m_best_header;
                 /* If possible, start at the block preceding the currently
                    best known header.  This ensures that we always get a
                    non-empty list of headers back as long as the peer
                    is up-to-date.  With a non-empty response, we can initialise
                    the peer's known best block.  This wouldn't be possible
-                   if we requested starting at m_chainman.m_best_header and
+                   if we requested starting at m_chainman.m_blockman.m_best_header and
                    got back an empty response.  */
                 if (pindexStart->pprev)
                     pindexStart = pindexStart->pprev;
@@ -5569,7 +5569,7 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
                          // Convert HEADERS_DOWNLOAD_TIMEOUT_PER_HEADER to microseconds before scaling
                          // to maintain precision
                          std::chrono::microseconds{HEADERS_DOWNLOAD_TIMEOUT_PER_HEADER} *
-                         Ticks<std::chrono::seconds>(NodeClock::now() - m_chainman.m_best_header->Time()) / consensusParams.nPowTargetSpacing
+                         Ticks<std::chrono::seconds>(NodeClock::now() - m_chainman.m_blockman.m_best_header->Time()) / consensusParams.nPowTargetSpacing
                         );
                     nSyncStarted++;
                 }
@@ -5877,7 +5877,7 @@ bool PeerManagerImpl::SendMessages(CNode* pto)
         // Check for headers sync timeouts
         if (state.fSyncStarted && peer->m_headers_sync_timeout < std::chrono::microseconds::max()) {
             // Detect whether this is a stalling initial-headers-sync peer
-            if (m_chainman.m_best_header->Time() <= NodeClock::now() - 24h) {
+            if (m_chainman.m_blockman.m_best_header->Time() <= NodeClock::now() - 24h) {
                 if (current_time > peer->m_headers_sync_timeout && nSyncStarted == 1 && (m_num_preferred_download_peers - state.fPreferredDownload >= 1)) {
                     // Disconnect a peer (without NetPermissionFlags::NoBan permission) if it is our only sync peer,
                     // and we have others we could be using instead.
