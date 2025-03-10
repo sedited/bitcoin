@@ -81,7 +81,7 @@ CreateAndActivateUTXOSnapshot(
             Chainstate& chain = node.chainman->ActiveChainstate();
             Assert(chain.LoadGenesisBlock());
             // These cache values will be corrected shortly in `MaybeRebalanceCaches`.
-            chain.InitCoinsDB(1 << 20, /*in_memory=*/true, /*should_wipe=*/false);
+            chain.InitCoinsDB(1 << 20, /*in_memory=*/true, /*should_wipe=*/false, node.chainman->m_options.coins_db, node.chainman->m_options.coins_view);
             chain.InitCoinsCache(1 << 20);
             chain.CoinsTip().SetBestBlock(gen_hash);
             chain.setBlockIndexCandidates.insert(node.chainman->m_blockman.LookupBlockIndex(gen_hash));

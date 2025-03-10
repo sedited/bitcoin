@@ -90,7 +90,9 @@ static ChainstateLoadResult CompleteChainstateInitialization(
             chainstate->InitCoinsDB(
                 /*cache_size_bytes=*/chainman.m_total_coinsdb_cache * init_cache_fraction,
                 /*in_memory=*/options.coins_db_in_memory,
-                /*should_wipe=*/options.wipe_chainstate_db);
+                /*should_wipe=*/options.wipe_chainstate_db,
+                /*coins_db=*/chainman.m_options.coins_db,
+                /*coins_view=*/chainman.m_options.coins_view);
         } catch (dbwrapper_error& err) {
             LogError("%s\n", err.what());
             return {ChainstateLoadStatus::FAILURE, _("Error opening coins database")};

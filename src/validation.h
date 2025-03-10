@@ -600,7 +600,9 @@ public:
     void InitCoinsDB(
         size_t cache_size_bytes,
         bool in_memory,
-        bool should_wipe);
+        bool should_wipe,
+        const DBOptions& coins_db,
+        const CoinsViewOptions& coins_view);
 
     //! Initialize the in-memory coins cache (to be done after the health of the on-disk database
     //! is verified).
