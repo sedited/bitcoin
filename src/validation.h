@@ -1374,6 +1374,6 @@ bool IsBIP30Repeat(const CBlockIndex& block_index);
 bool IsBIP30Unspendable(const uint256& block_hash, int block_height);
 
 // Returns the script flags which should be checked for a given block
-script_verify_flags GetBlockScriptFlags(const CBlockIndex& block_index, const ChainstateManager& chainman);
+script_verify_flags GetBlockScriptFlags(const CBlockIndex& block_index, const Consensus::Params& consensusparams, VersionBitsCache& versionbitscache);
 
 #endif // BITCOIN_VALIDATION_H

@@ -1498,7 +1498,7 @@ RPCHelpMan getdeploymentinfo()
             deploymentinfo.pushKV("hash", blockindex->GetBlockHash().ToString());
             deploymentinfo.pushKV("height", blockindex->nHeight);
             {
-                const auto flagnames = GetScriptFlagNames(GetBlockScriptFlags(*blockindex, chainman));
+                const auto flagnames = GetScriptFlagNames(GetBlockScriptFlags(*blockindex, chainman.GetConsensus(), chainman.m_versionbitscache));
                 UniValue uv_flagnames(UniValue::VARR);
                 uv_flagnames.push_backV(flagnames.begin(), flagnames.end());
                 deploymentinfo.pushKV("script_flags", uv_flagnames);
