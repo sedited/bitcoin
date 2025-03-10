@@ -1881,6 +1881,8 @@ Chainstate::Chainstate(
     ChainstateManager& chainman,
     std::optional<uint256> from_snapshot_blockhash)
     : m_mempool(mempool),
+      m_datadir(chainman.m_options.datadir),
+      m_notifications(chainman.m_options.notifications),
       m_blockman(blockman),
       m_chainman(chainman),
       m_assumeutxo(from_snapshot_blockhash ? Assumeutxo::UNVALIDATED : Assumeutxo::VALIDATED),
@@ -1888,7 +1890,7 @@ Chainstate::Chainstate(
 
 fs::path Chainstate::StoragePath() const
 {
-    fs::path path{m_chainman.m_options.datadir / "chainstate"};
+    fs::path path{m_datadir / "chainstate"};
     if (m_from_snapshot_blockhash) {
         path += node::SNAPSHOT_CHAINSTATE_SUFFIX;
     }
@@ -1995,11 +1997,11 @@ void Chainstate::CheckForkWarningConditions()
 
     if (m_chainman.m_best_invalid && m_chainman.m_best_invalid->nChainWork > m_chain.Tip()->nChainWork + (GetBlockProof(*m_chain.Tip()) * 6)) {
         LogWarning("Found invalid chain more than 6 blocks longer than our best chain. This could be due to database corruption or consensus incompatibility with peers.");
-        m_chainman.GetNotifications().warningSet(
+        m_notifications.warningSet(
             kernel::Warning::LARGE_WORK_INVALID_CHAIN,
             _("Warning: Found invalid chain more than 6 blocks longer than our best chain. This could be due to database corruption or consensus incompatibility with peers."));
     } else {
-        m_chainman.GetNotifications().warningUnset(kernel::Warning::LARGE_WORK_INVALID_CHAIN);
+        m_notifications.warningUnset(kernel::Warning::LARGE_WORK_INVALID_CHAIN);
     }
 }
 
@@ -2363,7 +2365,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
             // We don't write down blocks to disk if they may have been
             // corrupted, so this should be impossible unless we're having hardware
             // problems.
-            return FatalError(m_chainman.GetNotifications(), state, _("Corrupt block found indicating potential hardware failure."));
+            return FatalError(m_notifications, state, _("Corrupt block found indicating potential hardware failure."));
         }
         LogError("%s: Consensus::CheckBlock: %s\n", __func__, state.ToString());
         return false;
@@ -2816,7 +2818,7 @@ bool Chainstate::FlushStateToDisk(
 
             // Ensure we can write block index
             if (!CheckDiskSpace(m_blockman.m_opts.blocks_dir)) {
-                return FatalError(m_chainman.GetNotifications(), state, _("Disk space is too low!"));
+                return FatalError(m_notifications, state, _("Disk space is too low!"));
             }
             {
                 LOG_TIME_MILLIS_WITH_CATEGORY("write block and undo data to disk", BCLog::BENCH);
@@ -2852,13 +2854,13 @@ bool Chainstate::FlushStateToDisk(
                 // twice (once in the log, and once in the tables). This is already
                 // an overestimation, as most will delete an existing entry or
                 // overwrite one. Still, use a conservative safety factor of 2.
-                if (!CheckDiskSpace(m_chainman.m_options.datadir, 48 * 2 * 2 * CoinsTip().GetCacheSize())) {
-                    return FatalError(m_chainman.GetNotifications(), state, _("Disk space is too low!"));
+                if (!CheckDiskSpace(m_datadir, 48 * 2 * 2 * CoinsTip().GetCacheSize())) {
+                    return FatalError(m_notifications, state, _("Disk space is too low!"));
                 }
                 // Flush the chainstate (which may refer to block index entries).
                 const auto empty_cache{(mode == FlushStateMode::ALWAYS) || fCacheLarge || fCacheCritical};
                 if (empty_cache ? !CoinsTip().Flush() : !CoinsTip().Sync()) {
-                    return FatalError(m_chainman.GetNotifications(), state, _("Failed to write to coin database."));
+                    return FatalError(m_notifications, state, _("Failed to write to coin database."));
                 }
                 full_flush_completed = true;
                 TRACEPOINT(utxocache, flush,
@@ -2880,7 +2882,7 @@ bool Chainstate::FlushStateToDisk(
         m_chainman.m_options.signals->ChainStateFlushed(this->GetRole(), GetLocator(m_chain.Tip()));
     }
     } catch (const std::runtime_error& e) {
-        return FatalError(m_chainman.GetNotifications(), state, strprintf(_("System error while flushing: %s"), e.what()));
+        return FatalError(m_notifications, state, strprintf(_("System error while flushing: %s"), e.what()));
     }
     return true;
 }
@@ -2952,7 +2954,7 @@ void Chainstate::UpdateTip(const CBlockIndex* pindexNew)
         for (auto [bit, active] : bits) {
             const bilingual_str warning = strprintf(_("Unknown new rules activated (versionbit %i)"), bit);
             if (active) {
-                m_chainman.GetNotifications().warningSet(kernel::Warning::UNKNOWN_NEW_RULES_ACTIVATED, warning);
+                m_notifications.warningSet(kernel::Warning::UNKNOWN_NEW_RULES_ACTIVATED, warning);
             } else {
                 warning_messages.push_back(warning);
             }
@@ -3099,7 +3101,7 @@ bool Chainstate::ConnectTip(
     if (!block_to_connect) {
         std::shared_ptr<CBlock> pblockNew = std::make_shared<CBlock>();
         if (!m_blockman.ReadBlock(*pblockNew, *pindexNew)) {
-            return FatalError(m_chainman.GetNotifications(), state, _("Failed to read block."));
+            return FatalError(m_notifications, state, _("Failed to read block."));
         }
         block_to_connect = std::move(pblockNew);
     } else {
@@ -3288,7 +3290,7 @@ bool Chainstate::ActivateBestChainStep(BlockValidationState& state, CBlockIndex*
             // If we're unable to disconnect a block during normal operation,
             // then that is a failure of our local system -- we should abort
             // rather than stay on a less work chain.
-            FatalError(m_chainman.GetNotifications(), state, _("Failed to disconnect block."));
+            FatalError(m_notifications, state, _("Failed to disconnect block."));
             return false;
         }
         fBlocksDisconnected = true;
@@ -3495,7 +3497,7 @@ bool Chainstate::ActivateBestChain(BlockValidationState& state, std::shared_ptr<
                     m_chainman.m_options.signals->UpdatedBlockTip(pindexNewTip, pindexFork, still_in_ibd);
                 }
 
-                if (kernel::IsInterrupted(m_chainman.GetNotifications().blockTip(
+                if (kernel::IsInterrupted(m_notifications.blockTip(
                         /*state=*/GetSynchronizationState(still_in_ibd, m_blockman.m_blockfiles_indexed),
                         /*index=*/*pindexNewTip,
                         /*verification_progress=*/m_chainman.GuessVerificationProgress(pindexNewTip))))
@@ -3761,7 +3763,7 @@ bool Chainstate::InvalidateBlock(BlockValidationState& state, CBlockIndex* pinde
         // parameter indicating the source of the tip change so hooks can
         // distinguish user-initiated invalidateblock changes from other
         // changes.
-        (void)m_chainman.GetNotifications().blockTip(
+        (void)m_notifications.blockTip(
             /*state=*/GetSynchronizationState(m_chainman.IsInitialBlockDownload(), m_blockman.m_blockfiles_indexed),
             /*index=*/*to_mark_failed->pprev,
             /*verification_progress=*/WITH_LOCK(m_chainman.GetMutex(), return m_chainman.GuessVerificationProgress(to_mark_failed->pprev)));
@@ -4674,7 +4676,7 @@ bool Chainstate::LoadChainTip()
     // Ensure KernelNotifications m_tip_block is set even if no new block arrives.
     if (!this->GetRole().historical) {
         // Ignoring return value for now.
-        (void)m_chainman.GetNotifications().blockTip(
+        (void)m_notifications.blockTip(
             /*state=*/GetSynchronizationState(/*init=*/true, m_blockman.m_blockfiles_indexed),
             /*index=*/*pindex,
             /*verification_progress=*/m_chainman.GuessVerificationProgress(tip));
@@ -4872,7 +4874,7 @@ bool Chainstate::ReplayBlocks()
         return false;
     }
 
-    m_chainman.GetNotifications().progress(_("Replaying blocks…"), 0, false);
+    m_notifications.progress(_("Replaying blocks…"), 0, false);
     LogInfo("Replaying blocks");
 
     const CBlockIndex* pindexOld = nullptr;  // Old tip during the interrupted flush.
@@ -4933,7 +4935,7 @@ bool Chainstate::ReplayBlocks()
             if (nHeight % 10'000 == 0) {
                 LogInfo("Rolling forward %s (%i)", pindex.GetBlockHash().ToString(), nHeight);
             }
-            m_chainman.GetNotifications().progress(_("Replaying blocks…"), (int)((nHeight - nForkHeight) * 100.0 / (pindexNew->nHeight - nForkHeight)), false);
+            m_notifications.progress(_("Replaying blocks…"), (int)((nHeight - nForkHeight) * 100.0 / (pindexNew->nHeight - nForkHeight)), false);
             if (!RollforwardBlock(&pindex, cache)) return false;
         }
         LogInfo("Rolled forward to %s", pindexNew->GetBlockHash().ToString());
@@ -4941,7 +4943,7 @@ bool Chainstate::ReplayBlocks()
 
     cache.SetBestBlock(pindexNew->GetBlockHash());
     cache.Flush(/*will_reuse_cache=*/false); // local CCoinsViewCache goes out of scope
-    m_chainman.GetNotifications().progress(bilingual_str{}, 100, false);
+    m_notifications.progress(bilingual_str{}, 100, false);
     return true;
 }
 
