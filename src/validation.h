@@ -590,6 +590,8 @@ protected:
 
     ChainStats& m_chain_stats;
 
+    ValidationSignals* m_signals;
+
 public:
     //! Reference to a BlockManager instance which itself is shared across all
     //! Chainstate instances.
