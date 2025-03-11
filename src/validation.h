@@ -819,15 +819,6 @@ public:
     // Apply the effects of a block disconnection on the UTXO set.
     bool DisconnectTip(BlockValidationState& state, DisconnectedBlockTransactions* disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
 
-    // Manual block validity manipulation:
-    /** Mark a block as precious and reorganize.
-     *
-     * May not be called in a validationinterface callback.
-     */
-    bool PreciousBlock(BlockValidationState& state, CBlockIndex* pindex)
-        EXCLUSIVE_LOCKS_REQUIRED(!m_chainstate_mutex)
-        LOCKS_EXCLUDED(::cs_main);
-
     /** Mark a block as invalid. */
     bool InvalidateBlock(BlockValidationState& state, CBlockIndex* pindex)
         EXCLUSIVE_LOCKS_REQUIRED(!m_chainstate_mutex)
@@ -1032,6 +1023,14 @@ public:
      * By default this only executes fully when using the Regtest chain; see: m_options.check_block_index.
      */
     void CheckBlockIndex() const;
+
+    // Manual block validity manipulation:
+    /** Mark a block as precious and reorganize.
+     *
+     * May not be called in a validationinterface callback.
+     */
+    bool PreciousBlock(BlockValidationState& state, CBlockIndex* pindex)
+        LOCKS_EXCLUDED(::cs_main);
 
     /**
      * Alias for ::cs_main.

@@ -1652,7 +1652,7 @@ static RPCHelpMan preciousblock()
     }
 
     BlockValidationState state;
-    chainman.ActiveChainstate().PreciousBlock(state, pblockindex);
+    chainman.PreciousBlock(state, pblockindex);
 
     if (!state.IsValid()) {
         throw JSONRPCError(RPC_DATABASE_ERROR, state.ToString());

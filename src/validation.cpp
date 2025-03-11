@@ -3568,35 +3568,37 @@ bool Chainstate::ActivateBestChain(BlockValidationState& state, std::shared_ptr<
     return true;
 }
 
-bool Chainstate::PreciousBlock(BlockValidationState& state, CBlockIndex* pindex)
+bool ChainstateManager::PreciousBlock(BlockValidationState& state, CBlockIndex* pindex)
 {
-    AssertLockNotHeld(m_chainstate_mutex);
     AssertLockNotHeld(::cs_main);
+    auto& chainstate{ActiveChainstate()};
     {
+        AssertLockNotHeld(chainstate.m_chainstate_mutex);
         LOCK(cs_main);
-        if (pindex->nChainWork < m_chain.Tip()->nChainWork) {
+        LOCK(chainstate.m_chainstate_mutex);
+        if (pindex->nChainWork < chainstate.m_chain.Tip()->nChainWork) {
             // Nothing to do, this block is not at the tip.
             return true;
         }
-        if (m_chain.Tip()->nChainWork > m_chainman.nLastPreciousChainwork) {
+        if (chainstate.m_chain.Tip()->nChainWork > nLastPreciousChainwork) {
             // The chain has been extended since the last call, reset the counter.
-            m_chainman.nBlockReverseSequenceId = -1;
+            nBlockReverseSequenceId = -1;
         }
-        m_chainman.nLastPreciousChainwork = m_chain.Tip()->nChainWork;
-        setBlockIndexCandidates.erase(pindex);
-        pindex->nSequenceId = m_chainman.nBlockReverseSequenceId;
-        if (m_chainman.nBlockReverseSequenceId > std::numeric_limits<int32_t>::min()) {
+        nLastPreciousChainwork = chainstate.m_chain.Tip()->nChainWork;
+        chainstate.setBlockIndexCandidates.erase(pindex);
+        pindex->nSequenceId = nBlockReverseSequenceId;
+        if (nBlockReverseSequenceId > std::numeric_limits<int32_t>::min()) {
             // We can't keep reducing the counter if somebody really wants to
             // call preciousblock 2**31-1 times on the same set of tips...
-            m_chainman.nBlockReverseSequenceId--;
+            nBlockReverseSequenceId--;
         }
         if (pindex->IsValid(BLOCK_VALID_TRANSACTIONS) && pindex->HaveNumChainTxs()) {
-            setBlockIndexCandidates.insert(pindex);
-            PruneBlockIndexCandidates();
+            chainstate.setBlockIndexCandidates.insert(pindex);
+            chainstate.PruneBlockIndexCandidates();
         }
     }
 
-    return ActivateBestChain(state, std::shared_ptr<const CBlock>());
+    return chainstate.ActivateBestChain(state, std::shared_ptr<const CBlock>());
 }
 
 bool Chainstate::InvalidateBlock(BlockValidationState& state, CBlockIndex* pindex)
