@@ -1886,6 +1886,7 @@ Chainstate::Chainstate(
       m_chain_stats(chainman.m_chain_stats),
       m_signals(chainman.m_options.signals),
       m_script_check_queue(chainman.m_script_check_queue),
+      m_assumed_valid_block(*chainman.m_options.assumed_valid_block),
       m_blockman(blockman),
       m_chainman(chainman),
       m_interrupt(chainman.m_interrupt),
@@ -2393,7 +2394,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     }
 
     const char* script_check_reason;
-    if (m_chainman.AssumedValidBlock().IsNull()) {
+    if (m_assumed_valid_block.IsNull()) {
         script_check_reason = "assumevalid=0 (always verify)";
     } else {
         constexpr int64_t TWO_WEEKS_IN_SECONDS{60 * 60 * 24 * 7 * 2};
@@ -2402,7 +2403,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         //  relative to a piece of software is an objective fact these defaults can be easily reviewed.
         // This setting doesn't force the selection of any particular chain but makes validating some faster by
         //  effectively caching the result of part of the verification.
-        BlockMap::const_iterator it{m_blockman.m_block_index.find(m_chainman.AssumedValidBlock())};
+        BlockMap::const_iterator it{m_blockman.m_block_index.find(m_assumed_valid_block)};
         if (it == m_blockman.m_block_index.end()) {
             script_check_reason = "assumevalid hash not in headers";
         } else if (it->second.GetAncestor(pindex->nHeight) != pindex) {
