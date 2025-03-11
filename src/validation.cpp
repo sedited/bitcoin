@@ -2022,7 +2022,7 @@ void Chainstate::InvalidChainFound(CBlockIndex* pindexNew)
     }
     SetBlockFailureFlags(pindexNew);
     if (m_blockman.m_best_header != nullptr && m_blockman.m_best_header->GetAncestor(pindexNew->nHeight) == pindexNew) {
-        m_chainman.RecalculateBestHeader();
+        RecalculateBestHeader();
     }
 
     LogInfo("%s: invalid block=%s  height=%d  log2_work=%f  date=%s\n", __func__,
@@ -6340,10 +6340,10 @@ ChainstateRole Chainstate::GetRole() const
     return ChainstateRole{.validated = m_assumeutxo == Assumeutxo::VALIDATED, .historical = bool{m_target_blockhash}};
 }
 
-void ChainstateManager::RecalculateBestHeader()
+void Chainstate::RecalculateBestHeader()
 {
     AssertLockHeld(cs_main);
-    m_blockman.m_best_header = ActiveChain().Tip();
+    m_blockman.m_best_header = m_chain.Tip();
     for (auto& entry : m_blockman.m_block_index) {
         if (!(entry.second.nStatus & BLOCK_FAILED_MASK) && m_blockman.m_best_header->nChainWork < entry.second.nChainWork) {
             m_blockman.m_best_header = &entry.second;

@@ -875,6 +875,11 @@ public:
     //! start > end is possible, meaning no blocks can be pruned.
     std::pair<int, int> GetPruneRange(int last_height_can_prune) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
+    //! If, due to invalidation / reconsideration of blocks, the previous
+    //! best header is no longer valid / guaranteed to be the most-work
+    //! header in our block-index not known to be invalid, recalculate it.
+    void RecalculateBestHeader() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+
 protected:
     bool ActivateBestChainStep(BlockValidationState& state, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);
     bool ConnectTip(
@@ -1350,11 +1355,6 @@ public:
 
     //! Call ActivateBestChain() on every chainstate.
     util::Result<void> ActivateBestChains() LOCKS_EXCLUDED(::cs_main);
-
-    //! If, due to invalidation / reconsideration of blocks, the previous
-    //! best header is no longer valid / guaranteed to be the most-work
-    //! header in our block-index not known to be invalid, recalculate it.
-    void RecalculateBestHeader() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     ~ChainstateManager();
 
