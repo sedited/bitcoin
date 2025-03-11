@@ -643,6 +643,9 @@ public:
         const DBOptions& coins_db,
         const CoinsViewOptions& coins_view);
 
+    /** Guess verification progress (as a fraction between 0.0=genesis and 1.0=current tip). */
+    double GuessVerificationProgress(const CBlockIndex* pindex) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+
     //! Initialize the in-memory coins cache (to be done after the health of the on-disk database
     //! is verified).
     void InitCoinsCache(size_t cache_size_bytes) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);

@@ -2913,7 +2913,7 @@ void Chainstate::PruneAndFlush()
 }
 
 static void UpdateTipLog(
-    const ChainstateManager& chainman,
+    const Chainstate& chainstate,
     const CCoinsViewCache& coins_tip,
     const CBlockIndex* tip,
     const std::string& func_name,
@@ -2929,7 +2929,7 @@ static void UpdateTipLog(
                    tip->GetBlockHash().ToString(), tip->nHeight, tip->nVersion,
                    log(tip->nChainWork.getdouble()) / log(2.0), tip->m_chain_tx_count,
                    FormatISO8601DateTime(tip->GetBlockTime()),
-                   chainman.GuessVerificationProgress(tip),
+                   chainstate.GuessVerificationProgress(tip),
                    coins_tip.DynamicMemoryUsage() * (1.0 / (1 << 20)),
                    coins_tip.GetCacheSize(),
                    !warning_messages.empty() ? strprintf(" warning='%s'", warning_messages) : "");
@@ -2946,7 +2946,7 @@ void Chainstate::UpdateTip(const CBlockIndex* pindexNew)
         // Only log every so often so that we don't bury log messages at the tip.
         constexpr int BACKGROUND_LOG_INTERVAL = 2000;
         if (pindexNew->nHeight % BACKGROUND_LOG_INTERVAL == 0) {
-            UpdateTipLog(m_chainman, coins_tip, pindexNew, __func__, "[background validation] ", "");
+            UpdateTipLog(*this, coins_tip, pindexNew, __func__, "[background validation] ", "");
         }
         return;
     }
@@ -2968,7 +2968,7 @@ void Chainstate::UpdateTip(const CBlockIndex* pindexNew)
             }
         }
     }
-    UpdateTipLog(m_chainman, coins_tip, pindexNew, __func__, "",
+    UpdateTipLog(*this, coins_tip, pindexNew, __func__, "",
                  util::Join(warning_messages, Untranslated(", ")).original);
 }
 
@@ -3508,7 +3508,7 @@ bool Chainstate::ActivateBestChain(BlockValidationState& state, std::shared_ptr<
                 if (kernel::IsInterrupted(m_notifications.blockTip(
                         /*state=*/GetSynchronizationState(still_in_ibd, m_blockman.m_blockfiles_indexed),
                         /*index=*/*pindexNewTip,
-                        /*verification_progress=*/m_chainman.GuessVerificationProgress(pindexNewTip))))
+                        /*verification_progress=*/GuessVerificationProgress(pindexNewTip))))
                 {
                     // Just breaking and returning success for now. This could
                     // be changed to bubble up the kernel::Interrupted value to
@@ -3776,7 +3776,7 @@ bool Chainstate::InvalidateBlock(BlockValidationState& state, CBlockIndex* pinde
         (void)m_notifications.blockTip(
             /*state=*/GetSynchronizationState(m_chainman.IsInitialBlockDownload(), m_blockman.m_blockfiles_indexed),
             /*index=*/*to_mark_failed->pprev,
-            /*verification_progress=*/WITH_LOCK(m_chainman.GetMutex(), return m_chainman.GuessVerificationProgress(to_mark_failed->pprev)));
+            /*verification_progress=*/WITH_LOCK(m_chainman.GetMutex(), return GuessVerificationProgress(to_mark_failed->pprev)));
 
         // Fire ActiveTipChange now for the current chain tip to make sure clients are notified.
         // ActivateBestChain may call this as well, but not necessarily.
@@ -4681,7 +4681,7 @@ bool Chainstate::LoadChainTip()
               tip->GetBlockHash().ToString(),
               m_chain.Height(),
               FormatISO8601DateTime(tip->GetBlockTime()),
-              m_chainman.GuessVerificationProgress(tip));
+              GuessVerificationProgress(tip));
 
     // Ensure KernelNotifications m_tip_block is set even if no new block arrives.
     if (!this->GetRole().historical) {
@@ -4689,7 +4689,7 @@ bool Chainstate::LoadChainTip()
         (void)m_notifications.blockTip(
             /*state=*/GetSynchronizationState(/*init=*/true, m_blockman.m_blockfiles_indexed),
             /*index=*/*pindex,
-            /*verification_progress=*/m_chainman.GuessVerificationProgress(tip));
+            /*verification_progress=*/GuessVerificationProgress(tip));
     }
 
     CheckForkWarningConditions();
@@ -5580,7 +5580,16 @@ bool Chainstate::ResizeCoinsCaches(size_t coinstip_size, size_t coinsdb_size)
 double ChainstateManager::GuessVerificationProgress(const CBlockIndex* pindex) const
 {
     AssertLockHeld(GetMutex());
-    const ChainTxData& data{GetParams().TxData()};
+    return ActiveChainstate().GuessVerificationProgress(pindex);
+}
+
+
+//! Guess how far we are in the verification process at the given block index
+//! require cs_main if pindex has not been validated yet (because m_chain_tx_count might be unset)
+double Chainstate::GuessVerificationProgress(const CBlockIndex* pindex) const
+{
+    AssertLockHeld(::cs_main);
+    const ChainTxData& data{m_chainparams.TxData()};
     if (pindex == nullptr) {
         return 0.0;
     }
@@ -5599,7 +5608,7 @@ double ChainstateManager::GuessVerificationProgress(const CBlockIndex* pindex) c
             // close to "1.0", because some users expect it to be. This also
             // avoids relying too much on the exact miner-set timestamp, which
             // may be off.
-            nNow - (m_blockman.m_best_header->nHeight - pindex->nHeight) * GetConsensus().nPowTargetSpacing :
+            nNow - (m_blockman.m_best_header->nHeight - pindex->nHeight) * m_chainparams.GetConsensus().nPowTargetSpacing :
             pindex->GetBlockTime(),
     };
 
