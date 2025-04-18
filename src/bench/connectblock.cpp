@@ -9,6 +9,7 @@
 #include <script/interpreter.h>
 #include <sync.h>
 #include <test/util/setup_common.h>
+#include <undo.h>
 #include <validation.h>
 
 #include <cassert>
@@ -101,7 +102,9 @@ void BenchmarkConnectBlock(benchmark::Bench& bench, std::vector<CKey>& keys, std
         CCoinsViewCache viewNew{&chainstate.CoinsTip()};
 
         assert(chainstate.BIP30Validate(test_block, pindex, viewNew, test_block_state));
-        assert(chainstate.ConnectBlock(test_block, test_block_state, pindex, viewNew));
+        CBlockUndo blockundo;
+        assert(chainstate.SpendBlock(test_block, pindex, viewNew, test_block_state, blockundo));
+        assert(chainstate.ConnectBlock(test_block, blockundo, test_block_state, pindex));
     });
 }
 
