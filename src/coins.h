@@ -433,6 +433,25 @@ public:
     const Coin& AccessCoin(const COutPoint &output) const;
 
     /**
+     * Return a vector of references to Coins in the cache in order they get
+     * consumed by the tx's inputs, or coinEmpty if the Coin is not
+     * found.
+     *
+     * Generally, this should only be held for a short scope. The coins should
+     * generally not be held through any other calls to this cache.
+     */
+    template <typename Callable>
+    auto AccessCoins(const CTransaction& tx, Callable&& callback) const
+    {
+        std::vector<std::reference_wrapper<const Coin>> coins;
+        coins.reserve(tx.vin.size());
+        for (const CTxIn& input : tx.vin) {
+            coins.emplace_back(AccessCoin(input.prevout));
+        }
+        return callback(std::span{coins});
+    }
+
+    /**
      * Add a coin. Set possible_overwrite to true if an unspent version may
      * already exist in the cache.
      */
