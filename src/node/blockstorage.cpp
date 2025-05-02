@@ -1184,27 +1184,28 @@ static auto InitBlocksdirXorKey(const BlockManager::Options& opts)
 std::unique_ptr<kernel::BlockTreeStore> BlockManager::CreateAndMigrateBlockTree()
 {
     LOCK(::cs_main);
-
-    auto migration_dir{m_opts.block_tree_db_params.path.parent_path() / "migration"};
+    auto migration_dir{m_opts.block_tree_dir.parent_path() / "migration"};
 
     // Guard against the rare case of a block tree db already being removed, but a migration existing
-    if (!fs::exists(m_opts.block_tree_db_params.path / "CURRENT") && fs::exists(migration_dir)) {
-        fs::rename(migration_dir, m_opts.block_tree_db_params.path);
+    if (!fs::exists(m_opts.block_tree_dir / "CURRENT") && fs::exists(migration_dir)) {
+        fs::rename(migration_dir, m_opts.block_tree_dir);
         LogInfo("   Successfully migrated the leveldb block tree db to new flat file block tree store.");
-        return std::make_unique<kernel::BlockTreeStore>(m_opts.block_tree_db_params.path, m_opts.chainparams, m_opts.block_tree_db_params.wipe_data);
+        return std::make_unique<kernel::BlockTreeStore>(m_opts.block_tree_dir, m_opts.chainparams, m_opts.wipe_block_tree_data);
     }
 
-    if (!fs::exists(m_opts.block_tree_db_params.path / "CURRENT")) {
-        return std::make_unique<kernel::BlockTreeStore>(m_opts.block_tree_db_params.path, m_opts.chainparams, m_opts.block_tree_db_params.wipe_data);
+    if (!fs::exists(m_opts.block_tree_dir / "CURRENT")) {
+        return std::make_unique<kernel::BlockTreeStore>(m_opts.block_tree_dir, m_opts.chainparams, m_opts.wipe_block_tree_data);
     }
 
-    if (m_opts.block_tree_db_params.wipe_data) {
-        fs::remove_all(m_opts.block_tree_db_params.path);
-        return std::make_unique<kernel::BlockTreeStore>(m_opts.block_tree_db_params.path, m_opts.chainparams, m_opts.block_tree_db_params.wipe_data);
+    if (m_opts.wipe_block_tree_data) {
+        fs::remove_all(m_opts.block_tree_dir);
+        return std::make_unique<kernel::BlockTreeStore>(m_opts.block_tree_dir, m_opts.chainparams, m_opts.wipe_block_tree_data);
     }
 
     LogInfo("Migrating leveldb block tree db to new flat file block tree store.");
-    auto block_tree_db{std::make_unique<BlockTreeDB>(m_opts.block_tree_db_params)};
+    DBParams db_params{};
+    db_params.path = m_opts.block_tree_dir;
+    auto block_tree_db{std::make_unique<BlockTreeDB>(db_params)};
 
     std::vector<std::pair<int, CBlockFileInfo>> files;
     int max_blockfile_num{0};
@@ -1229,7 +1230,6 @@ std::unique_ptr<kernel::BlockTreeStore> BlockManager::CreateAndMigrateBlockTree(
         block_tree_db->ReadFlag("prunedblockfiles", pruned_block_files);
     }
 
-
     {
         // Cleanup a potentially previously failed migration
         fs::remove_all(migration_dir);
@@ -1252,12 +1252,12 @@ std::unique_ptr<kernel::BlockTreeStore> BlockManager::CreateAndMigrateBlockTree(
         block_tree_store->WriteBatchSync(dump_files, max_blockfile_num, dump_blockindexes);
     }
 
-    fs::remove_all(m_opts.block_tree_db_params.path);
-    fs::rename(migration_dir, m_opts.block_tree_db_params.path);
+    fs::remove_all(m_opts.block_tree_dir);
+    fs::rename(migration_dir, m_opts.block_tree_dir);
     LogInfo("   Successfully migrated the leveldb block tree db to new flat file block tree store.");
     m_block_index.clear();
 
-    return std::make_unique<kernel::BlockTreeStore>(m_opts.block_tree_db_params.path, m_opts.chainparams, m_opts.block_tree_db_params.wipe_data);
+    return std::make_unique<kernel::BlockTreeStore>(m_opts.block_tree_dir, m_opts.chainparams, m_opts.wipe_block_tree_data);
 }
 
 BlockManager::BlockManager(const util::SignalInterrupt& interrupt, Options opts)
@@ -1270,7 +1270,7 @@ BlockManager::BlockManager(const util::SignalInterrupt& interrupt, Options opts)
 {
     m_block_tree_db = CreateAndMigrateBlockTree();
 
-    if (m_opts.block_tree_db_params.wipe_data) {
+    if (m_opts.wipe_block_tree_data) {
         m_block_tree_db->WriteReindexing(true);
         m_blockfiles_indexed = false;
         // If we're reindexing in prune mode, wipe away unusable block files and all undo data files
