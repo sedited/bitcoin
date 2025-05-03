@@ -34,6 +34,7 @@
 #include <interfaces/mining.h>
 #include <interfaces/node.h>
 #include <ipc/exception.h>
+#include <kernel/blocktreestorage.h>
 #include <kernel/caches.h>
 #include <kernel/context.h>
 #include <key.h>
@@ -1316,7 +1317,7 @@ static ChainstateLoadResult InitAndLoadChainstate(
     Assert(!node.chainman); // Was reset above
     try {
         node.chainman = std::make_unique<ChainstateManager>(*Assert(node.shutdown_signal), chainman_opts, blockman_opts);
-    } catch (dbwrapper_error& e) {
+    } catch (kernel::BlockTreeStoreError& e) {
         LogError("%s", e.what());
         return {ChainstateLoadStatus::FAILURE, _("Error opening block database")};
     } catch (std::exception& e) {
