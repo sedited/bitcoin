@@ -4,6 +4,7 @@
 
 #include <consensus/validation.h>
 #include <key_io.h>
+#include <node/transaction.h>
 #include <policy/packages.h>
 #include <policy/policy.h>
 #include <policy/rbf.h>
@@ -803,7 +804,7 @@ BOOST_AUTO_TEST_CASE(package_witness_swap_tests)
     CTransactionRef ptx_parent2_v1 = MakeTransactionRef(mtx_parent2_v1);
     CTransactionRef ptx_parent2_v2 = MakeTransactionRef(mtx_parent2_v2);
     // Put parent2_v1 in the package, submit parent2_v2 to the mempool.
-    const MempoolAcceptResult parent2_v2_result = m_node.chainman->ProcessTransaction(ptx_parent2_v2);
+    const MempoolAcceptResult parent2_v2_result = node::ProcessTransaction(ptx_parent2_v2, m_node);
     BOOST_CHECK(parent2_v2_result.m_result_type == MempoolAcceptResult::ResultType::VALID);
     package_mixed.push_back(ptx_parent2_v1);
 
