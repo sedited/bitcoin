@@ -8,9 +8,12 @@
 #include <coins.h>
 #include <consensus/amount.h>
 #include <consensus/validation.h>
+#include <interfaces/chain.h>
+#include <kernel/cs_main.h>
 #include <key.h>
 #include <node/blockstorage.h>
 #include <policy/feerate.h>
+#include <script/interpreter.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <pubkey.h>

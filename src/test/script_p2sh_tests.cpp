@@ -4,6 +4,7 @@
 
 #include <consensus/tx_verify.h>
 #include <key.h>
+#include <policy/feerate.h>
 #include <policy/policy.h>
 #include <policy/settings.h>
 #include <script/script.h>
