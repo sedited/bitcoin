@@ -9,6 +9,7 @@
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <core_memusage.h>
+#include <policy/feerate.h>
 #include <policy/policy.h>
 #include <policy/settings.h>
 #include <primitives/transaction.h>

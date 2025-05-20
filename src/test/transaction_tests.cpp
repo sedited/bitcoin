@@ -14,6 +14,7 @@
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <key.h>
+#include <policy/feerate.h>
 #include <policy/policy.h>
 #include <policy/settings.h>
 #include <primitives/transaction_identifier.h>

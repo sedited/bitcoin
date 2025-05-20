@@ -35,13 +35,6 @@ add_library(bitcoinkernel
   ../node/blockstorage.cpp
   ../node/chainstate.cpp
   ../node/utxo_snapshot.cpp
-  ../policy/ephemeral_policy.cpp
-  ../policy/feerate.cpp
-  ../policy/packages.cpp
-  ../policy/policy.cpp
-  ../policy/rbf.cpp
-  ../policy/settings.cpp
-  ../policy/truc_policy.cpp
   ../pow.cpp
   ../primitives/block.cpp
   ../primitives/transaction.cpp
@@ -58,17 +51,13 @@ add_library(bitcoinkernel
   ../support/lockedpool.cpp
   ../sync.cpp
   ../txdb.cpp
-  ../txgraph.cpp
-  ../txmempool.cpp
   ../uint256.cpp
   ../util/chaintype.cpp
   ../util/check.cpp
-  ../util/feefrac.cpp
   ../util/fs.cpp
   ../util/fs_helpers.cpp
   ../util/hasher.cpp
   ../util/moneystr.cpp
-  ../util/rbf.cpp
   ../util/serfloat.cpp
   ../util/signalinterrupt.cpp
   ../util/strencodings.cpp
@@ -91,8 +80,6 @@ target_link_libraries(bitcoinkernel
     secp256k1_objs
     $<$<PLATFORM_ID:Windows>:bcrypt>
     $<TARGET_NAME_IF_EXISTS:USDT::headers>
-  PUBLIC
-    Boost::headers
 )
 
 target_include_directories(bitcoinkernel PRIVATE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/leveldb/include>)
