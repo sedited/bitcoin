@@ -6,12 +6,15 @@
 #define BITCOIN_NODE_TRANSACTION_H
 
 #include <common/messages.h>
+#include <kernel/cs_main.h>
 #include <node/types.h>
 #include <policy/feerate.h>
+#include <policy/mempool_accept_result.h>
 #include <primitives/transaction.h>
 
 class CBlockIndex;
 class CTxMemPool;
+class Chainstate;
 namespace Consensus {
 struct Params;
 }
@@ -32,6 +35,22 @@ static const CFeeRate DEFAULT_MAX_RAW_TX_FEE_RATE{COIN / 10};
  * by these RPCs and the GUI. This can be overridden with the maxburnamount argument.
  */
 static const CAmount DEFAULT_MAX_BURN_AMOUNT{0};
+
+/**
+ * Try to add a transaction to the memory pool.
+ *
+ * @param[in]  tx              The transaction to submit for mempool acceptance.
+ * @param[in]  test_accept     When true, run validation checks but don't submit to mempool.
+ */
+MempoolAcceptResult ProcessTransaction(const CTransactionRef& tx, Chainstate& chainstate, CTxMemPool& mempool, bool test_accept=false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+/**
+ * Try to add a transaction to the memory pool.
+ *
+ * @param[in]  tx              The transaction to submit for mempool acceptance.
+ * @param[in]  test_accept     When true, run validation checks but don't submit to mempool.
+ */
+[[nodiscard]] MempoolAcceptResult ProcessTransaction(const CTransactionRef& tx, const NodeContext& node, bool test_accept=false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
 /**
  * Submit a transaction to the mempool and (optionally) relay it to all P2P peers.
