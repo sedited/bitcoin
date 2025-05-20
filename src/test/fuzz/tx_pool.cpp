@@ -108,7 +108,7 @@ void Finish(FuzzedDataProvider& fuzzed_data_provider, MockedTxPool& tx_pool, Cha
         // Now try to add those transactions back, as though a reorg happened.
         std::vector<Txid> hashes_to_update;
         for (const auto& tx : block_template->block.vtx) {
-            const auto res = AcceptToMemoryPool(chainstate, tx, GetTime(), true, /*test_accept=*/false);
+            const auto res = AcceptToMemoryPool(chainstate, tx, tx_pool, GetTime(), true, /*test_accept=*/false);
             if (res.m_result_type == MempoolAcceptResult::ResultType::VALID) {
                 hashes_to_update.push_back(tx->GetHash());
             } else {

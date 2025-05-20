@@ -32,11 +32,8 @@
 #include <logging/timer.h>
 #include <node/blockstorage.h>
 #include <node/utxo_snapshot.h>
-#include <policy/ephemeral_policy.h>
 #include <policy/policy.h>
-#include <policy/rbf.h>
 #include <policy/settings.h>
-#include <policy/truc_policy.h>
 #include <pow.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
