@@ -4,7 +4,6 @@
 
 #include <signet.h>
 
-#include <common/system.h>
 #include <consensus/merkle.h>
 #include <consensus/params.h>
 #include <consensus/validation.h>
