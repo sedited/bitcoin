@@ -7,7 +7,7 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
-#include <script/sign.h>
+#include <script/interpreter.h>
 #include <serialize.h>
 #include <streams.h>
 #include <util/result.h>

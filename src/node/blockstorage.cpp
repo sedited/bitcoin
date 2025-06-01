@@ -28,7 +28,6 @@
 #include <tinyformat.h>
 #include <uint256.h>
 #include <undo.h>
-#include <util/batchpriority.h>
 #include <util/check.h>
 #include <util/fs.h>
 #include <util/obfuscation.h>
