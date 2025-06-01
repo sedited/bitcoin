@@ -7,14 +7,24 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
-#include <script/sign.h>
+#include <script/interpreter.h>
 #include <serialize.h>
 #include <streams.h>
 #include <util/result.h>
 #include <util/strencodings.h>
+#include <util/string.h>
+#include <util/translation.h>
 
 #include <algorithm>
-#include <string>
+#include <compare>
+#include <cstdint>
+#include <exception>
+#include <map>
+#include <optional>
+#include <span>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
 using util::SplitString;
 
