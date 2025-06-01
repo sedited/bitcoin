@@ -14,12 +14,14 @@
 #include <kernel/cs_main.h>
 #include <kernel/messagestartchars.h>
 #include <primitives/block.h>
+#include <serialize.h>
 #include <streams.h>
 #include <sync.h>
 #include <uint256.h>
 #include <util/expected.h>
 #include <util/fs.h>
 #include <util/hasher.h>
+#include <util/obfuscation.h>
 
 #include <array>
 #include <atomic>
@@ -35,6 +37,9 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <algorithm>
+#include <cstddef>
+#include <iosfwd>
 
 class BlockValidationState;
 class CBlockUndo;

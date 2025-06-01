@@ -6,19 +6,23 @@
 #ifndef BITCOIN_NODE_UTXO_SNAPSHOT_H
 #define BITCOIN_NODE_UTXO_SNAPSHOT_H
 
-#include <chainparams.h>
 #include <kernel/chainparams.h>
 #include <kernel/cs_main.h>
-#include <serialize.h>
+#include <kernel/messagestartchars.h>
 #include <sync.h>
+#include <tinyformat.h>
 #include <uint256.h>
 #include <util/chaintype.h>
-#include <util/check.h>
 #include <util/fs.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
+#include <ios>
 #include <optional>
+#include <set>
 #include <string_view>
+#include <string>
 
 // UTXO set snapshot magic bytes
 static constexpr std::array<uint8_t, 5> SNAPSHOT_MAGIC_BYTES = {'u', 't', 'x', 'o', 0xff};
