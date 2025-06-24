@@ -568,7 +568,6 @@ bool BlockManager::LoadBlockIndexDB(const std::optional<uint256>& snapshot_block
 
 void BlockManager::ScanAndUnlinkAlreadyPrunedFiles()
 {
-    AssertLockHeld(::cs_main);
     LOCK(m_blockfile_mutex);
     int max_blockfile = this->MaxBlockfileNum();
     if (!m_have_pruned) {
