@@ -213,8 +213,8 @@ private:
      * The nAddSize argument passed to this function should include not just the size of the serialized CBlock, but also the size of
      * separator fields (STORAGE_HEADER_BYTES).
      */
-    [[nodiscard]] FlatFilePos FindNextBlockPos(unsigned int nAddSize, unsigned int nHeight, uint64_t nTime);
-    [[nodiscard]] bool FlushChainstateBlockFile(int tip_height);
+    [[nodiscard]] FlatFilePos FindNextBlockPos(unsigned int nAddSize, unsigned int nHeight, uint64_t nTime) EXCLUSIVE_LOCKS_REQUIRED(!m_last_blockfile_mutex);
+    [[nodiscard]] bool FlushChainstateBlockFile(int tip_height) EXCLUSIVE_LOCKS_REQUIRED(!m_last_blockfile_mutex);
     bool FindUndoPos(BlockValidationState& state, int nFile, FlatFilePos& pos, unsigned int nAddSize);
 
     AutoFile OpenUndoFile(const FlatFilePos& pos, bool fReadOnly = false) const;
@@ -224,7 +224,7 @@ private:
         std::set<int>& setFilesToPrune,
         int nManualPruneHeight,
         const Chainstate& chain,
-        ChainstateManager& chainman);
+        ChainstateManager& chainman) EXCLUSIVE_LOCKS_REQUIRED(!m_last_blockfile_mutex);
 
     /**
      * Prune block and undo files (blk???.dat and rev???.dat) so that the disk space used is less than a user-defined target.
@@ -246,9 +246,9 @@ private:
         std::set<int>& setFilesToPrune,
         int last_prune,
         const Chainstate& chain,
-        ChainstateManager& chainman);
+        ChainstateManager& chainman) EXCLUSIVE_LOCKS_REQUIRED(!m_last_blockfile_mutex);
 
-    RecursiveMutex cs_LastBlockFile;
+    Mutex m_last_blockfile_mutex;
     std::vector<CBlockFileInfo> m_blockfile_info;
 
     //! Since assumedvalid chainstates may be syncing a range of the chain that is very
@@ -262,11 +262,11 @@ private:
     //!
     //! The first element is the NORMAL cursor, second is ASSUMED.
     std::array<std::optional<BlockfileCursor>, BlockfileType::NUM_TYPES>
-        m_blockfile_cursors GUARDED_BY(cs_LastBlockFile) = {
+        m_blockfile_cursors GUARDED_BY(m_last_blockfile_mutex) = {
             BlockfileCursor{},
             std::nullopt,
     };
-    int MaxBlockfileNum() const EXCLUSIVE_LOCKS_REQUIRED(cs_LastBlockFile)
+    int MaxBlockfileNum() EXCLUSIVE_LOCKS_REQUIRED(m_last_blockfile_mutex)
     {
         static const BlockfileCursor empty_cursor;
         const auto& normal = m_blockfile_cursors[BlockfileType::NORMAL].value_or(empty_cursor);
@@ -348,16 +348,16 @@ public:
 
     std::unique_ptr<BlockTreeDB> m_block_tree_db GUARDED_BY(::cs_main);
 
-    void WriteBlockIndexDB() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    void WriteBlockIndexDB() EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_last_blockfile_mutex);
     bool LoadBlockIndexDB(const std::optional<uint256>& snapshot_blockhash)
-        EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_last_blockfile_mutex);
 
     /**
      * Remove any pruned block & undo files that are still on disk.
      * This could happen on some systems if the file was still being read while unlinked,
      * or if we crash before unlinking.
      */
-    void ScanAndUnlinkAlreadyPrunedFiles() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    void ScanAndUnlinkAlreadyPrunedFiles() EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_last_blockfile_mutex);
 
     CBlockIndex* AddToBlockIndex(const CBlockHeader& block, CBlockIndex*& best_header) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     /** Create a new block index entry for a given block hash */
@@ -373,7 +373,7 @@ public:
     CBlockFileInfo* GetBlockFileInfo(size_t n);
 
     bool WriteBlockUndo(const CBlockUndo& blockundo, BlockValidationState& state, CBlockIndex& block)
-        EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_last_blockfile_mutex);
 
     /** Store block on disk and update block file statistics.
      *
@@ -383,7 +383,7 @@ public:
      * @returns in case of success, the position to which the block was written to
      *          in case of an error, an empty FlatFilePos
      */
-    FlatFilePos WriteBlock(const CBlock& block, int nHeight);
+    FlatFilePos WriteBlock(const CBlock& block, int nHeight) EXCLUSIVE_LOCKS_REQUIRED(!m_last_blockfile_mutex);
 
     /** Update blockfile info while processing a block during reindex. The block must be available on disk.
      *
@@ -391,7 +391,7 @@ public:
      * @param[in]  nHeight      the height of the block
      * @param[in]  pos          the position of the serialized CBlock on disk
      */
-    void UpdateBlockInfo(const CBlock& block, unsigned int nHeight, const FlatFilePos& pos);
+    void UpdateBlockInfo(const CBlock& block, unsigned int nHeight, const FlatFilePos& pos) EXCLUSIVE_LOCKS_REQUIRED(!m_last_blockfile_mutex);
 
     /** Whether running in -prune mode. */
     [[nodiscard]] bool IsPruneMode() const { return m_prune_mode; }
