@@ -4585,6 +4585,31 @@ MempoolAcceptResult ChainstateManager::ProcessTransaction(const CTransactionRef&
     return result;
 }
 
+BlockValidationState ChainstateManager::ValidateBlock(
+    const CBlock& block,
+    CBlockUndo& block_undo)
+{
+    LOCK(cs_main);
+    BlockValidationState state;
+    CBlockIndex* index = m_blockman.LookupBlockIndex(block.GetHash());
+    assert(index);
+    if (!CheckBlock(block, state, GetConsensus(), /*fCheckPOW=*/true, /*fCheckMerkleRoot=*/true)) {
+        if (state.IsValid()) NONFATAL_UNREACHABLE();
+        return state;
+    }
+
+    if (!ContextualCheckBlock(block, state, *this, index->pprev)) {
+        if (state.IsValid()) NONFATAL_UNREACHABLE();
+        return state;
+    }
+
+    if (!ActiveChainstate().ConnectBlock(block, block_undo, state, index, /*fJustCheck=*/true)) {
+        if (state.IsValid()) NONFATAL_UNREACHABLE();
+        return state;
+    }
+
+    return state;
+}
 
 BlockValidationState TestBlockValidity(
     Chainstate& chainstate,
