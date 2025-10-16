@@ -22,7 +22,7 @@ namespace node {
 MempoolAcceptResult ProcessTransaction(const CTransactionRef& tx, Chainstate& chainstate, CTxMemPool& mempool, bool test_accept)
 {
     AssertLockHeld(cs_main);
-    auto result = AcceptToMemoryPool(chainstate, tx, GetTime(), /*bypass_limits=*/ false, test_accept);
+    auto result = AcceptToMemoryPool(chainstate, tx, mempool, GetTime(), /*bypass_limits=*/ false, test_accept);
     mempool.check(chainstate.CoinsTip(), chainstate.m_chain.Height() + 1);
     return result;
 }
