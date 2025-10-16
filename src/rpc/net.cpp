@@ -29,6 +29,7 @@
 #include <rpc/server_util.h>
 #include <rpc/util.h>
 #include <sync.h>
+#include <txmempool.h>
 #include <univalue.h>
 #include <util/asmap.h>
 #include <util/chaintype.h>
