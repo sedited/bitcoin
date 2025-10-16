@@ -14,11 +14,6 @@ class FuzzedDataProvider;
 
 class DummyChainState final : public Chainstate
 {
-public:
-    void SetMempool(CTxMemPool* mempool)
-    {
-        m_mempool = mempool;
-    }
 };
 
 [[nodiscard]] CTxMemPoolEntry ConsumeTxMemPoolEntry(FuzzedDataProvider& fuzzed_data_provider, const CTransaction& tx, uint32_t max_height=std::numeric_limits<uint32_t>::max()) noexcept;

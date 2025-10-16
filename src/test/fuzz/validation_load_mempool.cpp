@@ -48,7 +48,6 @@ FUZZ_TARGET(validation_load_mempool, .init = initialize_validation_load_mempool)
     Assert(error.empty());
 
     auto& chainstate{static_cast<DummyChainState&>(g_setup->m_node.chainman->ActiveChainstate())};
-    chainstate.SetMempool(&pool);
 
     auto fuzzed_fopen = [&](const fs::path&, const char*) {
         return fuzzed_file_provider.open();

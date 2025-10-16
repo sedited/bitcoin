@@ -1974,10 +1974,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             return;
         }
         // Load mempool from disk
-        if (auto* pool{chainman.ActiveChainstate().GetMempool()}) {
-            LoadMempool(*pool, ShouldPersistMempool(args) ? MempoolPath(args) : fs::path{}, chainman.ActiveChainstate(), {});
-            pool->SetLoadTried(!chainman.m_interrupt);
-        }
+        LoadMempool(*node.mempool.get(), ShouldPersistMempool(args) ? MempoolPath(args) : fs::path{}, chainman.ActiveChainstate(), {});
+        node.mempool->SetLoadTried(!chainman.m_interrupt);
     });
 
     /*
