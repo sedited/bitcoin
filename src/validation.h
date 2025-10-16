@@ -27,7 +27,6 @@
 #include <script/verify_flags.h>
 #include <sync.h>
 #include <txdb.h>
-#include <txmempool.h>
 #include <uint256.h>
 #include <util/byte_units.h>
 #include <util/check.h>
@@ -52,7 +51,6 @@
 #include <vector>
 
 class Chainstate;
-class CTxMemPool;
 class ChainstateManager;
 struct ChainTxData;
 class DisconnectedBlockTransactions;
@@ -379,10 +377,6 @@ protected:
      */
     Mutex m_chainstate_mutex;
 
-    //! Optional mempool that is kept in sync with the chain.
-    //! Only the active chainstate has a mempool.
-    CTxMemPool* m_mempool;
-
     //! Manages the UTXO set, which is a reflection of the contents of `m_chain`.
     std::unique_ptr<CoinsViews> m_coins_views;
 
@@ -405,7 +399,6 @@ public:
     ChainstateManager& m_chainman;
 
     explicit Chainstate(
-        CTxMemPool* mempool,
         node::BlockManager& blockman,
         ChainstateManager& chainman,
         std::optional<uint256> from_snapshot_blockhash = std::nullopt);
@@ -517,12 +510,6 @@ public:
     {
         AssertLockHeld(::cs_main);
         return Assert(m_coins_views)->m_dbview;
-    }
-
-    //! @returns A pointer to the mempool.
-    CTxMemPool* GetMempool()
-    {
-        return m_mempool;
     }
 
     //! @returns A reference to a wrapped view of the in-memory UTXO set that
@@ -886,10 +873,7 @@ public:
     size_t m_total_coinsdb_cache{0};
 
     //! Instantiate a new chainstate.
-    //!
-    //! @param[in] mempool              The mempool to pass to the chainstate
-    //                                  constructor
-    Chainstate& InitializeChainstate(CTxMemPool* mempool) EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+    Chainstate& InitializeChainstate() EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
 
     //! Construct and activate a Chainstate on the basis of UTXO snapshot data.
     //!
