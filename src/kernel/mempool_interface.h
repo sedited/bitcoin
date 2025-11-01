@@ -5,6 +5,8 @@
 #ifndef BITCOIN_KERNEL_MEMPOOL_INTERFACE_H
 #define BITCOIN_KERNEL_MEMPOOL_INTERFACE_H
 
+#include <cstddef>
+
 class CBlock;
 class CTransaction;
 
@@ -21,6 +23,7 @@ public:
 
     virtual void removeRecursive(const CTransaction& tx) {}
     virtual void removeForBlock(const CBlock& block, unsigned int block_height) {}
+    virtual size_t measureExternalDynamicMemoryUsage() { return 0; }
 };
 
 } // namespace kernel

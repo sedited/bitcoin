@@ -21,6 +21,7 @@ public:
 
     void removeRecursive(const CTransaction& tx) override;
     void removeForBlock(const CBlock& block, unsigned int nBlockHeight) override;
+    size_t measureExternalDynamicMemoryUsage() override;
 
 private:
     CTxMemPool& m_mempool;
