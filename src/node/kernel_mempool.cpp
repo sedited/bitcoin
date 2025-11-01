@@ -15,4 +15,10 @@ void KernelMempool::removeRecursive(const CTransaction& tx)
     m_mempool.removeRecursive(tx, MemPoolRemovalReason::REORG);
 }
 
+void KernelMempool::removeForBlock(const CBlock& block, unsigned int block_height)
+{
+    LOCK(m_mempool.cs);
+    m_mempool.removeForBlock(block.vtx, block_height);
+}
+
 } // namespace node

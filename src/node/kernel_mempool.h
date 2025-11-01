@@ -7,6 +7,7 @@
 
 #include <kernel/mempool_interface.h>
 
+class CBlock;
 class CTransaction;
 class CTxMemPool;
 
@@ -19,6 +20,7 @@ public:
         : m_mempool{mempool} {}
 
     void removeRecursive(const CTransaction& tx) override;
+    void removeForBlock(const CBlock& block, unsigned int nBlockHeight) override;
 
 private:
     CTxMemPool& m_mempool;
