@@ -7,6 +7,9 @@
 
 #include <kernel/mempool_interface.h>
 
+#include <cstddef>
+#include <cstdint>
+
 class CBlock;
 class CTransaction;
 class CTxMemPool;
@@ -22,6 +25,7 @@ public:
     void removeRecursive(const CTransaction& tx) override;
     void removeForBlock(const CBlock& block, unsigned int nBlockHeight) override;
     size_t measureExternalDynamicMemoryUsage() override;
+    void addTransactionsUpdated(uint32_t n) override;
 
 private:
     CTxMemPool& m_mempool;
