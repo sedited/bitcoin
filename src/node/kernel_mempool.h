@@ -11,6 +11,7 @@
 #include <cstdint>
 
 class CBlock;
+class CCoinsViewCache;
 class CTransaction;
 class CTxMemPool;
 
@@ -26,6 +27,7 @@ public:
     void removeForBlock(const CBlock& block, unsigned int nBlockHeight) override;
     size_t measureExternalDynamicMemoryUsage() override;
     void addTransactionsUpdated(uint32_t n) override;
+    void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) override;
 
 private:
     CTxMemPool& m_mempool;
