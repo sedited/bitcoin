@@ -7,6 +7,9 @@
 #include <primitives/transaction.h>
 #include <txmempool.h>
 
+#include <cstddef>
+#include <cstdint>
+
 namespace node {
 
 void KernelMempool::removeRecursive(const CTransaction& tx)
@@ -24,6 +27,11 @@ void KernelMempool::removeForBlock(const CBlock& block, unsigned int block_heigh
 size_t KernelMempool::measureExternalDynamicMemoryUsage()
 {
     return m_mempool.DynamicMemoryUsage();
+}
+
+void KernelMempool::addTransactionsUpdated(uint32_t n)
+{
+    m_mempool.AddTransactionsUpdated(n);
 }
 
 } // namespace node
