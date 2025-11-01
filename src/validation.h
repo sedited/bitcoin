@@ -1010,6 +1010,7 @@ public:
     const arith_uint256& MinimumChainWork() const { return *Assert(m_options.minimum_chain_work); }
     const uint256& AssumedValidBlock() const { return *Assert(m_options.assumed_valid_block); }
     kernel::Notifications& GetNotifications() const { return m_options.notifications; };
+    kernel::Mempool& GetMempool() const { return m_options.mempool_interface; };
 
     /**
      * Make various assertions about the state of the block index.

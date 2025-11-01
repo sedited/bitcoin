@@ -6,6 +6,7 @@
 #include <consensus/validation.h>
 #include <kernel/disconnected_transactions.h>
 #include <node/chainstatemanager_args.h>
+#include <node/kernel_mempool.h>
 #include <node/kernel_notifications.h>
 #include <node/utxo_snapshot.h>
 #include <random.h>
@@ -31,6 +32,7 @@
 #include <boost/test/unit_test.hpp>
 
 using node::BlockManager;
+using node::KernelMempool;
 using node::KernelNotifications;
 using node::SnapshotMetadata;
 
@@ -426,9 +428,11 @@ struct SnapshotTestSetup : TestChain100Setup {
             chainman.ResetChainstates();
             BOOST_CHECK_EQUAL(chainman.m_chainstates.size(), 0);
             m_node.notifications = std::make_unique<KernelNotifications>(Assert(m_node.shutdown_request), m_node.exit_status, *Assert(m_node.warnings));
+            m_node.mempool_interface = std::make_unique<KernelMempool>(*Assert(m_node.mempool));
             const ChainstateManager::Options chainman_opts{
                 .chainparams = ::Params(),
                 .datadir = chainman.m_options.datadir,
+                .mempool_interface = *m_node.mempool_interface,
                 .notifications = *m_node.notifications,
                 .signals = m_node.validation_signals.get(),
             };
@@ -954,9 +958,11 @@ BOOST_FIXTURE_TEST_CASE(chainstatemanager_args, BasicTestingSetup)
     //! Try to apply the provided args to a ChainstateManager::Options
     auto get_opts = [&](const std::vector<const char*>& args) {
         static kernel::Notifications notifications{};
+        static kernel::Mempool mempool{};
         static const ChainstateManager::Options options{
             .chainparams = ::Params(),
             .datadir = {},
+            .mempool_interface = mempool,
             .notifications = notifications};
         return SetOptsFromArgs(*this->m_node.args, options, args);
     };
