@@ -14,6 +14,7 @@
 #include <net_processing.h>
 #include <netmessagemaker.h>
 #include <node/blockstorage.h>
+#include <node/kernel_mempool.h>
 #include <node/mining_types.h>
 #include <policy/truc_policy.h>
 #include <primitives/block.h>
@@ -111,12 +112,14 @@ void ResetChainmanAndMempool(TestingSetup& setup)
 {
     SetMockTime(Params().GenesisBlock().Time());
 
+    setup.m_node.chainman.reset();
+
     bilingual_str error{};
     setup.m_node.mempool.reset();
     setup.m_node.mempool = std::make_unique<CTxMemPool>(MemPoolOptionsForTest(setup.m_node), error);
+    setup.m_node.mempool_interface = std::make_unique<node::KernelMempool>(*setup.m_node.mempool);
     Assert(error.empty());
 
-    setup.m_node.chainman.reset();
     setup.m_make_chainman();
     setup.LoadVerifyActivateChainstate();
 

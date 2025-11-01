@@ -15,6 +15,8 @@
 #include <kernel/chainparams.h>
 #include <kernel/checks.h>
 #include <kernel/context.h>
+#include <kernel/cs_main.h>
+#include <kernel/mempool_interface.h>
 #include <kernel/notifications_interface.h>
 #include <kernel/warning.h>
 #include <logging.h>
@@ -397,6 +399,8 @@ class Context
 public:
     std::unique_ptr<kernel::Context> m_context;
 
+    std::shared_ptr<kernel::Mempool> m_mempool;
+
     std::shared_ptr<KernelNotifications> m_notifications;
 
     std::unique_ptr<util::SignalInterrupt> m_interrupt;
@@ -409,6 +413,7 @@ public:
 
     Context(const ContextOptions* options, bool& sane)
         : m_context{std::make_unique<kernel::Context>()},
+          m_mempool{std::make_unique<kernel::Mempool>()},
           m_interrupt{std::make_unique<util::SignalInterrupt>()}
     {
         if (options) {
@@ -459,6 +464,7 @@ struct ChainstateManagerOptions {
         : m_chainman_options{ChainstateManager::Options{
               .chainparams = *context->m_chainparams,
               .datadir = data_dir,
+              .mempool_interface = *context->m_mempool,
               .notifications = *context->m_notifications,
               .signals = context->m_signals.get()}},
           m_blockman_options{node::BlockManager::Options{
