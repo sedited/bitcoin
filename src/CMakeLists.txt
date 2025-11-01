@@ -220,6 +220,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   node/eviction.cpp
   node/interface_ui.cpp
   node/interfaces.cpp
+  node/kernel_mempool.cpp
   node/kernel_notifications.cpp
   node/mempool_args.cpp
   node/mempool_persist.cpp

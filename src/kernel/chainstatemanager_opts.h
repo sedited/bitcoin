@@ -5,6 +5,7 @@
 #ifndef BITCOIN_KERNEL_CHAINSTATEMANAGER_OPTS_H
 #define BITCOIN_KERNEL_CHAINSTATEMANAGER_OPTS_H
 
+#include <kernel/mempool_interface.h>
 #include <kernel/notifications_interface.h>
 
 #include <arith_uint256.h>
@@ -42,6 +43,7 @@ struct ChainstateManagerOpts {
     std::chrono::seconds max_tip_age{DEFAULT_MAX_TIP_AGE};
     DBOptions coins_db{};
     CoinsViewOptions coins_view{};
+    Mempool& mempool_interface;
     Notifications& notifications;
     ValidationSignals* signals{nullptr};
     //! Number of script check worker threads. Zero means no parallel verification.

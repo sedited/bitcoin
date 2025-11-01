@@ -22,6 +22,7 @@
 #include <node/blockstorage.h>
 #include <node/chainstate.h>
 #include <node/context.h>
+#include <node/kernel_mempool.h>
 #include <node/kernel_notifications.h>
 #include <node/mempool_args.h>
 #include <node/miner.h>
@@ -69,6 +70,7 @@ using namespace util::hex_literals;
 using node::ApplyArgsManOptions;
 using node::BlockAssembler;
 using node::BlockManager;
+using node::KernelMempool;
 using node::KernelNotifications;
 using node::LoadChainstate;
 using node::RegenerateCommitments;
@@ -258,6 +260,7 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, TestOpts opts)
     m_node.warnings = std::make_unique<node::Warnings>();
 
     m_node.notifications = std::make_unique<KernelNotifications>(Assert(m_node.shutdown_request), m_node.exit_status, *Assert(m_node.warnings));
+    m_node.mempool_interface = std::make_unique<KernelMempool>(*Assert(m_node.mempool));
 
     m_make_chainman = [this, &chainparams, opts] {
         Assert(!m_node.chainman);
@@ -265,6 +268,7 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, TestOpts opts)
             .chainparams = chainparams,
             .datadir = m_args.GetDataDirNet(),
             .check_block_index = 1,
+            .mempool_interface = *m_node.mempool_interface,
             .notifications = *m_node.notifications,
             .signals = m_node.validation_signals.get(),
             // Use no worker threads while fuzzing to avoid non-determinism
