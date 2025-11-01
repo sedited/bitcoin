@@ -3125,7 +3125,7 @@ bool Chainstate::ConnectTip(
              Ticks<MillisecondsDouble>(m_chainman.time_chainstate) / m_chainman.num_blocks_total);
     // Remove conflicting transactions from the mempool.;
     if (m_mempool) {
-        m_mempool->removeForBlock(block_to_connect->vtx, pindexNew->nHeight);
+        m_chainman.GetMempool().removeForBlock(*block_to_connect, pindexNew->nHeight);
         disconnectpool.removeForBlock(block_to_connect->vtx);
     }
     // Update m_chain & related variables.
