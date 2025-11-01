@@ -2995,7 +2995,7 @@ bool Chainstate::DisconnectTip(BlockValidationState& state, DisconnectedBlockTra
         // Save transactions to re-add to mempool at end of reorg. If any entries are evicted for
         // exceeding memory limits, remove them and their descendants from the mempool.
         for (auto&& evicted_tx : disconnectpool->AddTransactionsFromBlock(block.vtx)) {
-            m_mempool->removeRecursive(*evicted_tx, MemPoolRemovalReason::REORG);
+            m_chainman.GetMempool().removeRecursive(*evicted_tx);
         }
     }
 

@@ -41,6 +41,7 @@ class SignalInterrupt;
 
 namespace node {
 class KernelNotifications;
+class KernelMempool;
 class Warnings;
 
 //! NodeContext struct containing references to chain state and connection
@@ -84,6 +85,7 @@ struct NodeContext {
     std::function<void()> rpc_interruption_point = [] {};
     //! Issues blocking calls about sync status, errors and warnings
     std::unique_ptr<KernelNotifications> notifications;
+    std::unique_ptr<KernelMempool> mempool_interface;
     //! Issues calls about blocks and transactions
     std::unique_ptr<ValidationSignals> validation_signals;
     std::atomic<int> exit_status{EXIT_SUCCESS};
