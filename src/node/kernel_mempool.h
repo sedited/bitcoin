@@ -32,7 +32,8 @@ public:
     void addTransactionsUpdated(uint32_t n) override;
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) override;
     void MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) override;
-
+    void BeginChainstateUpdate() override;
+    void EndChainstateUpdate() override;
 private:
     CTxMemPool& m_mempool;
 };

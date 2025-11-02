@@ -282,11 +282,21 @@ public:
     std::vector<CTxMemPoolEntry::CTxMemPoolEntryRef> GetChildren(const CTxMemPoolEntry &entry) const;
     std::vector<CTxMemPoolEntry::CTxMemPoolEntryRef> GetParents(const CTxMemPoolEntry &entry) const;
 
+    void Lock() {
+        m_lock.emplace(cs, "CTxMemPool::cs", __FILE__, __LINE__);
+    }
+
+    void Unlock() {
+        m_lock.reset();
+    }
+
 private:
     typedef std::map<txiter, setEntries, CompareIteratorByHash> cacheMap;
 
 
     std::vector<indexed_transaction_set::const_iterator> GetSortedScoreWithTopology() const EXCLUSIVE_LOCKS_REQUIRED(cs);
+
+    std::optional<UniqueLock<RecursiveMutex>> m_lock;
 
     /**
      * Track locally submitted transactions to periodically retry initial broadcast.

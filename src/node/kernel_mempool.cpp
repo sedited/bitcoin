@@ -49,4 +49,14 @@ void KernelMempool::MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, Di
     m_mempool.MaybeUpdateMempoolForReorg(active_chainstate, disconnectpool, fAddToMempool);
 }
 
+void KernelMempool::BeginChainstateUpdate()
+{
+    m_mempool.Lock();
+}
+
+void KernelMempool::EndChainstateUpdate()
+{
+    m_mempool.Unlock();
+}
+
 } // namespace node
