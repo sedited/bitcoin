@@ -5,15 +5,18 @@
 #ifndef BITCOIN_NODE_KERNEL_MEMPOOL_H
 #define BITCOIN_NODE_KERNEL_MEMPOOL_H
 
+#include "kernel/disconnected_transactions.h"
 #include <kernel/mempool_interface.h>
 
 #include <cstddef>
 #include <cstdint>
 
 class CBlock;
+class Chainstate;
 class CCoinsViewCache;
 class CTransaction;
 class CTxMemPool;
+class DisconnectedBlockTransactions;
 
 namespace node {
 
@@ -28,6 +31,7 @@ public:
     size_t measureExternalDynamicMemoryUsage() override;
     void addTransactionsUpdated(uint32_t n) override;
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) override;
+    void MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) override;
 
 private:
     CTxMemPool& m_mempool;
