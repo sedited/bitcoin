@@ -9,8 +9,10 @@
 #include <cstdint>
 
 class CBlock;
+class Chainstate;
 class CCoinsViewCache;
 class CTransaction;
+class DisconnectedBlockTransactions;
 
 namespace kernel {
 
@@ -28,6 +30,7 @@ public:
     virtual size_t measureExternalDynamicMemoryUsage() { return 0; }
     virtual void addTransactionsUpdated(uint32_t n) {}
     virtual void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) {}
+    virtual void MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) {}
 };
 
 } // namespace kernel

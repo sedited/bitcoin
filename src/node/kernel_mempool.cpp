@@ -42,4 +42,11 @@ void KernelMempool::check(const CCoinsViewCache& active_coins_tip, int64_t spend
     m_mempool.check(active_coins_tip, spendheight);
 }
 
+void KernelMempool::MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool)
+{
+    LOCK(m_mempool.cs);
+    LOCK(::cs_main);
+    m_mempool.MaybeUpdateMempoolForReorg(active_chainstate, disconnectpool, fAddToMempool);
+}
+
 } // namespace node
