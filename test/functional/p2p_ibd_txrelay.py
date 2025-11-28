@@ -89,13 +89,11 @@ class P2PIBDTxRelayTest(BitcoinTestFramework):
             assert not node.getblockchaininfo()['initialblockdownload']
             self.wait_until(lambda: all(peer['minfeefilter'] == NORMAL_FEE_FILTER for peer in node.getpeerinfo()))
 
-        self.log.info("Check that txs confirmed during IBD are in the recently-confirmed filter once out of ibd")
+        self.log.info("Check that txs confirmed during IBD are not in the recently-confirmed filter once out of ibd")
         peer_inver = self.nodes[0].add_p2p_connection(P2PDataStore())
         peer_inver.send_and_ping(msg_inv([CInv(t=MSG_WTX, h=ibd_wtxid)]))
         self.nodes[0].bumpmocktime(NONPREF_PEER_TX_DELAY)
-        peer_inver.sync_with_ping()
-        with p2p_lock:
-            assert txid not in peer_inver.getdata_requests
+        peer_inver.wait_for_getdata([ibd_wtxid])
         self.nodes[0].disconnect_p2ps()
 
         self.log.info("Check that nodes process the same transaction, even when unsolicited, when no longer in IBD")
