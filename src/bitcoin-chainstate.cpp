@@ -59,9 +59,6 @@ public:
             case BlockValidationResult::UNSET:
                 std::cout << "initial value. Block has not yet been rejected" << std::endl;
                 break;
-            case BlockValidationResult::HEADER_LOW_WORK:
-                std::cout << "the block header may be on a too-little-work chain" << std::endl;
-                break;
             case BlockValidationResult::CONSENSUS:
                 std::cout << "invalid by consensus rules" << std::endl;
                 break;

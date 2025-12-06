@@ -353,7 +353,6 @@ typedef uint32_t btck_BlockValidationResult;
 #define btck_BlockValidationResult_MISSING_PREV ((btck_BlockValidationResult)(5))    //!< We don't have the previous block the checked one is built on
 #define btck_BlockValidationResult_INVALID_PREV ((btck_BlockValidationResult)(6))    //!< A block this one builds on is invalid
 #define btck_BlockValidationResult_TIME_FUTURE ((btck_BlockValidationResult)(7))     //!< block timestamp was > 2 hours in the future (or our clock is bad)
-#define btck_BlockValidationResult_HEADER_LOW_WORK ((btck_BlockValidationResult)(8)) //!< the block header may be on a too-little-work chain
 
 /**
  * Holds the validation interface callbacks. The user data pointer may be used
