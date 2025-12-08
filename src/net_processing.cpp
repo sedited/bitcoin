@@ -1965,8 +1965,8 @@ void PeerManagerImpl::BlockConnected(
     }
 
     // The following task can be skipped since we don't maintain a mempool for
-    // the ibd/background chainstate.
-    if (role == ChainstateRole::BACKGROUND) {
+    // the ibd/background chainstate or during ibd.
+    if (role == ChainstateRole::BACKGROUND || m_chainman.IsInitialBlockDownload()) {
         return;
     }
     LOCK(m_tx_download_mutex);
