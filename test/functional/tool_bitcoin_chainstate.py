@@ -20,7 +20,7 @@ class BitcoinChainstateTest(BitcoinTestFramework):
 
     def add_block(self, datadir, input, expected_stderr):
         proc = subprocess.Popen(
-            self.get_binaries().chainstate_argv() + [datadir],
+            self.get_binaries().chainstate_argv() + [f"-datadir={datadir}"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
