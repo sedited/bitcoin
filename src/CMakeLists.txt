@@ -407,6 +407,7 @@ if(BUILD_KERNEL_LIB)
     target_link_libraries(bitcoin-chainstate
       PRIVATE
         core_interface
+        bitcoin_common
         bitcoinkernel
     )
     install_binary_component(bitcoin-chainstate INTERNAL)
