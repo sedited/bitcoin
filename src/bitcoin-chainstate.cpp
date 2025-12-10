@@ -11,6 +11,7 @@
 //
 // It is part of the libbitcoinkernel project.
 
+#include <common/args.h>
 #include <kernel/bitcoinkernel_wrapper.h>
 
 #include <cassert>
@@ -22,7 +23,22 @@
 #include <string_view>
 #include <vector>
 
-using namespace btck;
+using btck::Block;
+using btck::BlockTreeEntry;
+using btck::BlockValidationResult;
+using btck::BlockValidationStateView;
+using btck::ChainMan;
+using btck::ChainParams;
+using btck::ChainstateManagerOptions;
+using btck::Context;
+using btck::ContextOptions;
+using btck::KernelNotifications;
+using btck::Logger;
+using btck::logging_set_options;
+using btck::SynchronizationState;
+using btck::ValidationInterface;
+using btck::ValidationMode;
+using btck::Warning;
 
 std::vector<std::byte> hex_string_to_byte_vec(std::string_view hex)
 {
@@ -141,22 +157,64 @@ public:
     }
 };
 
+std::optional<btck::ChainType> ParseChainType(ArgsManager& args)
+{
+    std::string chain = args.GetArg("-chain").value_or("main");
+    if (chain == "main") {
+        return btck::ChainType::MAINNET;
+    } else if (chain == "test") {
+        return btck::ChainType::TESTNET;
+    } else if (chain == "testnet4") {
+        return btck::ChainType::TESTNET_4;
+    } else if (chain == "signet") {
+        return btck::ChainType::SIGNET;
+    } else if (chain == "regtest") {
+        return btck::ChainType::REGTEST;
+    } else {
+        std::cerr << "Error: Unknown chain '" << chain << "'. Allowed values: main, test, testnet4, signet, regtest" << std::endl;
+        return std::nullopt;
+    }
+}
+
 int main(int argc, char* argv[])
 {
-    // SETUP: Argument parsing and handling
-    const bool has_regtest_flag{argc == 3 && std::string(argv[1]) == "-regtest"};
-    if (argc < 2 || argc > 3 || (argc == 3 && !has_regtest_flag)) {
+    ArgsManager args;
+    SetupHelpOptions(args);
+
+    std::string error;
+    args.AddArg("-datadir=<datadir>", "Path to the desired data directory", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+    args.AddArg("-chain=<chain>", "Use the chain <chain> (default: main). Allowed values are 'main', 'testnet', 'testnet4', 'signet', 'regtest'", ArgsManager::ALLOW_ANY, OptionsCategory::OPTIONS);
+
+    if (!args.ParseParameters(argc, argv, error)) {
+        std::cerr << "Failed to parse command line options: " << error << std::endl;
+        return 1;
+    }
+
+
+    if (HelpRequested(args)) {
         std::cerr
-            << "Usage: " << argv[0] << " [-regtest] DATADIR" << std::endl
+            << "Usage: " << argv[0] << " -datadir=DATADIR" << std::endl
             << "Display DATADIR information, and process hex-encoded blocks on standard input." << std::endl
-            << "Uses mainnet parameters by default, regtest with -regtest flag" << std::endl
+            << "Uses mainnet parameters by default, regtest with -chain=regtest flag" << std::endl
             << std::endl
             << "IMPORTANT: THIS EXECUTABLE IS EXPERIMENTAL, FOR TESTING ONLY, AND EXPECTED TO" << std::endl
             << "           BREAK IN FUTURE VERSIONS. DO NOT USE ON YOUR ACTUAL DATADIR." << std::endl;
+        std::cerr << args.GetHelpMessage();
+        return 0;
+    }
+
+    if (!args.IsArgSet("-datadir")) {
+        std::cerr << "The -datadir=<path> argument is always required." << std::endl;
         return 1;
     }
-    std::filesystem::path abs_datadir{std::filesystem::absolute(argv[argc-1])};
+
+    std::filesystem::path abs_datadir{std::filesystem::absolute(*args.GetArg("-datadir"))};
     std::filesystem::create_directories(abs_datadir);
+
+    auto chain_type = ParseChainType(args);
+    if (!chain_type) {
+        return 1;
+    }
 
     btck_LoggingOptions logging_options = {
         .log_timestamps = true,
@@ -171,7 +229,7 @@ int main(int argc, char* argv[])
     Logger logger{std::make_unique<KernelLog>()};
 
     ContextOptions options{};
-    ChainParams params{has_regtest_flag ? ChainType::REGTEST : ChainType::MAINNET};
+    ChainParams params{*chain_type};
     options.SetChainParams(params);
 
     options.SetNotifications(std::make_shared<TestKernelNotifications>());
