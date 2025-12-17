@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(validation_chainstate_resize_caches)
         /*coins_db=*/manager.m_options.coins_db,
         /*coins_view=*/manager.m_options.coins_view);
     WITH_LOCK(::cs_main, c1.InitCoinsCache(1 << 23));
-    BOOST_REQUIRE(c1.LoadGenesisBlock()); // Need at least one block loaded to be able to flush caches
+    BOOST_REQUIRE(manager.LoadGenesisBlock()); // Need at least one block loaded to be able to flush caches
 
     // Add a coin to the in-memory cache, upsize once, then downsize.
     {

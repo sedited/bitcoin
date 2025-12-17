@@ -5016,7 +5016,7 @@ bool ChainstateManager::LoadBlockIndex()
     return true;
 }
 
-bool Chainstate::LoadGenesisBlock()
+bool ChainstateManager::LoadGenesisBlock()
 {
     LOCK(cs_main);
 
@@ -5024,18 +5024,18 @@ bool Chainstate::LoadGenesisBlock()
     // m_blockman.m_block_index. Note that we can't use m_chain here, since it is
     // set based on the coins db, not the block index db, which is the only
     // thing loaded at this point.
-    if (m_blockman.m_block_index.count(m_chainparams.GenesisBlock().GetHash()))
+    if (m_blockman.m_block_index.count(GetParams().GenesisBlock().GetHash()))
         return true;
 
     try {
-        const CBlock& block = m_chainparams.GenesisBlock();
+        const CBlock& block = GetParams().GenesisBlock();
         FlatFilePos blockPos{m_blockman.WriteBlock(block, 0)};
         if (blockPos.IsNull()) {
             LogError("%s: writing genesis block to disk failed\n", __func__);
             return false;
         }
         CBlockIndex* pindex = m_blockman.AddToBlockIndex(block);
-        m_chainman.ReceivedBlockTransactions(block, pindex, blockPos);
+        ReceivedBlockTransactions(block, pindex, blockPos);
     } catch (const std::runtime_error& e) {
         LogError("%s: failed to write genesis block: %s\n", __func__, e.what());
         return false;
