@@ -599,6 +599,8 @@ protected:
 
     arith_uint256 m_minimum_chain_work;
 
+    std::function<void()> m_target_block_reached = std::function<void()>();
+
 public:
     //! Reference to a BlockManager instance which itself is shared across all
     //! Chainstate instances.
@@ -1018,7 +1020,7 @@ public:
 
     //! Function to restart active indexes; set dynamically to avoid a circular
     //! dependency on `base/index.cpp`.
-    std::function<void()> snapshot_download_completed = std::function<void()>();
+    std::function<void()> m_target_block_reached = std::function<void()>();
 
     const CChainParams& GetParams() const { return m_options.chainparams; }
     const Consensus::Params& GetConsensus() const { return m_options.chainparams.GetConsensus(); }
