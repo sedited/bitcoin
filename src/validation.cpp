@@ -2943,7 +2943,7 @@ void Chainstate::UpdateTip(const CBlockIndex* pindexNew)
 
     // The remainder of the function isn't relevant if we are not acting on
     // the active chainstate, so return if need be.
-    if (this != &m_chainman.ActiveChainstate()) {
+    if (m_target_blockhash) {
         // Only log every so often so that we don't bury log messages at the tip.
         constexpr int BACKGROUND_LOG_INTERVAL = 2000;
         if (pindexNew->nHeight % BACKGROUND_LOG_INTERVAL == 0) {
@@ -3500,7 +3500,7 @@ bool Chainstate::ActivateBestChain(BlockValidationState& state, std::shared_ptr<
 
             // Notify external listeners about the new tip.
             // Enqueue while holding cs_main to ensure that UpdatedBlockTip is called in the order in which blocks are connected
-            if (this == &m_chainman.ActiveChainstate() && pindexFork != pindexNewTip) {
+            if (!m_target_blockhash && pindexFork != pindexNewTip) {
                 // Notify ValidationInterface subscribers
                 if (m_signals) {
                     m_signals->UpdatedBlockTip(pindexNewTip, pindexFork, still_in_ibd);
@@ -3520,7 +3520,7 @@ bool Chainstate::ActivateBestChain(BlockValidationState& state, std::shared_ptr<
             }
             } // release MempoolMutex
             // Notify external listeners about the new tip, even if pindexFork == pindexNewTip.
-            if (m_signals && this == &m_chainman.ActiveChainstate()) {
+            if (m_signals && !m_target_blockhash) {
                 m_signals->ActiveTipChange(*Assert(pindexNewTip), m_chainman.IsInitialBlockDownload());
             }
         } // release cs_main
