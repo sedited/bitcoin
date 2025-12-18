@@ -10,7 +10,6 @@
 #include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <txmempool.h>
-#include <util/result.h>
 
 #include <set>
 #include <string>

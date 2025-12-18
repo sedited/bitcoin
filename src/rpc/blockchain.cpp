@@ -3370,7 +3370,7 @@ static RPCHelpMan loadtxoutset()
 
     auto activation_result{chainman.ActivateSnapshot(afile, metadata, false)};
     if (!activation_result) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strprintf("Unable to load UTXO snapshot: %s. (%s)", util::ErrorString(activation_result).original, path.utf8string()));
+        throw JSONRPCError(RPC_INTERNAL_ERROR, strprintf("Unable to load UTXO snapshot: %s. (%s)", activation_result.error(), path.utf8string()));
     }
 
     // Because we can't provide historical blocks during tip or background sync.

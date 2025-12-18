@@ -31,7 +31,6 @@
 #include <uint256.h>
 #include <undo.h>
 #include <util/fs.h>
-#include <util/result.h>
 #include <util/signalinterrupt.h>
 #include <util/task_runner.h>
 #include <validation.h>
@@ -298,25 +297,25 @@ public:
     {
         if (m_cbs.header_tip) m_cbs.header_tip(m_cbs.user_data, cast_state(state), height, timestamp, presync ? 1 : 0);
     }
-    void progress(const bilingual_str& title, int progress_percent, bool resume_possible) override
+    void progress(const std::string& title, int progress_percent, bool resume_possible) override
     {
-        if (m_cbs.progress) m_cbs.progress(m_cbs.user_data, title.original.c_str(), title.original.length(), progress_percent, resume_possible ? 1 : 0);
+        if (m_cbs.progress) m_cbs.progress(m_cbs.user_data, title.c_str(), title.length(), progress_percent, resume_possible ? 1 : 0);
     }
-    void warningSet(kernel::Warning id, const bilingual_str& message) override
+    void warningSet(kernel::Warning id, const std::string& message) override
     {
-        if (m_cbs.warning_set) m_cbs.warning_set(m_cbs.user_data, cast_btck_warning(id), message.original.c_str(), message.original.length());
+        if (m_cbs.warning_set) m_cbs.warning_set(m_cbs.user_data, cast_btck_warning(id), message.c_str(), message.length());
     }
     void warningUnset(kernel::Warning id) override
     {
         if (m_cbs.warning_unset) m_cbs.warning_unset(m_cbs.user_data, cast_btck_warning(id));
     }
-    void flushError(const bilingual_str& message) override
+    void flushError(const std::string& message) override
     {
-        if (m_cbs.flush_error) m_cbs.flush_error(m_cbs.user_data, message.original.c_str(), message.original.length());
+        if (m_cbs.flush_error) m_cbs.flush_error(m_cbs.user_data, message.c_str(), message.length());
     }
-    void fatalError(const bilingual_str& message) override
+    void fatalError(const std::string& message) override
     {
-        if (m_cbs.fatal_error) m_cbs.fatal_error(m_cbs.user_data, message.original.c_str(), message.original.length());
+        if (m_cbs.fatal_error) m_cbs.fatal_error(m_cbs.user_data, message.c_str(), message.length());
     }
 };
 
@@ -969,16 +968,16 @@ btck_ChainstateManager* btck_chainstate_manager_create(
         kernel::CacheSizes cache_sizes{DEFAULT_KERNEL_CACHE};
         auto [status, chainstate_err]{node::LoadChainstate(*chainman, cache_sizes, chainstate_load_opts)};
         if (status != node::ChainstateLoadStatus::SUCCESS) {
-            LogError("Failed to load chain state from your data directory: %s", chainstate_err.original);
+            LogError("Failed to load chain state from your data directory: %s", chainstate_err);
             return nullptr;
         }
         std::tie(status, chainstate_err) = node::VerifyLoadedChainstate(*chainman, chainstate_load_opts);
         if (status != node::ChainstateLoadStatus::SUCCESS) {
-            LogError("Failed to verify loaded chain state from your datadir: %s", chainstate_err.original);
+            LogError("Failed to verify loaded chain state from your datadir: %s", chainstate_err);
             return nullptr;
         }
         if (auto result = chainman->ActivateBestChains(); !result) {
-            LogError("%s", util::ErrorString(result).original);
+            LogError("%s", result.error());
             return nullptr;
         }
     } catch (const std::exception& e) {

@@ -10,7 +10,7 @@
 #include <script/sign.h>
 #include <serialize.h>
 #include <streams.h>
-#include <util/result.h>
+#include <util/expected.h>
 #include <util/strencodings.h>
 
 #include <algorithm>
@@ -234,7 +234,7 @@ bool DecodeHexBlk(CBlock& block, const std::string& strHexBlk)
     return true;
 }
 
-util::Result<int> SighashFromStr(const std::string& sighash)
+util::Expected<int, std::string> SighashFromStr(const std::string& sighash)
 {
     static const std::map<std::string, int> map_sighash_values = {
         {std::string("DEFAULT"), int(SIGHASH_DEFAULT)},
@@ -249,6 +249,6 @@ util::Result<int> SighashFromStr(const std::string& sighash)
     if (it != map_sighash_values.end()) {
         return it->second;
     } else {
-        return util::Error{Untranslated("'" + sighash + "' is not a valid sighash parameter.")};
+        return util::Unexpected{"'" + sighash + "' is not a valid sighash parameter."};
     }
 }

@@ -6,11 +6,10 @@
 #define BITCOIN_CORE_IO_H
 
 #include <consensus/amount.h>
-#include <util/result.h>
+#include <util/expected.h>
 
+#include <functional>
 #include <string>
-#include <vector>
-#include <optional>
 
 class CBlock;
 class CBlockHeader;
@@ -39,7 +38,7 @@ std::string ScriptToAsmStr(const CScript& script, const bool fAttemptSighashDeco
 [[nodiscard]] bool DecodeHexBlk(CBlock&, const std::string& strHexBlk);
 bool DecodeHexBlockHeader(CBlockHeader&, const std::string& hex_header);
 
-[[nodiscard]] util::Result<int> SighashFromStr(const std::string& sighash);
+[[nodiscard]] util::Expected<int, std::string> SighashFromStr(const std::string& sighash);
 
 // core_write.cpp
 UniValue ValueFromAmount(const CAmount amount);

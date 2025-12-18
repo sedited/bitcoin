@@ -1295,7 +1295,7 @@ static ChainstateLoadResult InitAndLoadChainstate(
     Assert(!node.mempool); // Was reset above
     node.mempool = std::make_unique<CTxMemPool>(mempool_opts, mempool_error);
     if (!mempool_error.empty()) {
-        return {ChainstateLoadStatus::FAILURE_FATAL, Untranslated(mempool_error)};
+        return {ChainstateLoadStatus::FAILURE_FATAL, mempool_error};
     }
     LogInfo("* Using %.1f MiB for in-memory UTXO set (plus up to %.1f MiB of unused mempool space)",
             cache_sizes.coins * (1.0 / 1024 / 1024),
@@ -1328,9 +1328,9 @@ static ChainstateLoadResult InitAndLoadChainstate(
         node.chainman = std::make_unique<ChainstateManager>(*Assert(node.shutdown_signal), chainman_opts, blockman_opts);
     } catch (dbwrapper_error& e) {
         LogError("%s", e.what());
-        return {ChainstateLoadStatus::FAILURE, _("Error opening block database")};
+        return {ChainstateLoadStatus::FAILURE, "Error opening block database"};
     } catch (std::exception& e) {
-        return {ChainstateLoadStatus::FAILURE_FATAL, Untranslated(strprintf("Failed to initialize ChainstateManager: %s", e.what()))};
+        return {ChainstateLoadStatus::FAILURE_FATAL, strprintf("Failed to initialize ChainstateManager: %s", e.what())};
     }
     ChainstateManager& chainman = *node.chainman;
     if (chainman.m_interrupt) return {ChainstateLoadStatus::INTERRUPTED, {}};
@@ -1805,8 +1805,8 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         // suggest a reindex
         bool do_retry{HasTestOption(args, "reindex_after_failure_noninteractive_yes") ||
             uiInterface.ThreadSafeQuestion(
-            error + Untranslated(".\n\n") + _("Do you want to rebuild the databases now?"),
-            error.original + ".\nPlease restart with -reindex or -reindex-chainstate to recover.",
+            Untranslated(error) + Untranslated(".\n\n") + _("Do you want to rebuild the databases now?"),
+            error + ".\nPlease restart with -reindex or -reindex-chainstate to recover.",
             "", CClientUIInterface::MSG_ERROR | CClientUIInterface::BTN_ABORT)};
         if (!do_retry) {
             return false;
@@ -1823,7 +1823,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             args);
     }
     if (status != ChainstateLoadStatus::SUCCESS && status != ChainstateLoadStatus::INTERRUPTED) {
-        return InitError(error);
+        return InitError(Untranslated(error));
     }
 
     // As LoadBlockIndex can take several minutes, it's possible the user
@@ -1976,7 +1976,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
 
         // Start indexes initial sync
         if (!StartIndexBackgroundSync(node)) {
-            bilingual_str err_str = _("Failed to start indexes, shutting down…");
+            std::string err_str = "Failed to start indexes, shutting down…";
             chainman.GetNotifications().fatalError(err_str);
             return;
         }

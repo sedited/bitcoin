@@ -361,7 +361,7 @@ std::optional<int> ParseSighashString(const UniValue& sighash)
     }
     const auto result{SighashFromStr(sighash.get_str())};
     if (!result) {
-        throw JSONRPCError(RPC_INVALID_PARAMETER, util::ErrorString(result).original);
+        throw JSONRPCError(RPC_INVALID_PARAMETER, result.error());
     }
     return result.value();
 }
