@@ -5,7 +5,9 @@
 #ifndef BITCOIN_KERNEL_CHECKS_H
 #define BITCOIN_KERNEL_CHECKS_H
 
-#include <util/result.h>
+#include <util/expected.h>
+
+#include <string>
 
 namespace kernel {
 
@@ -14,7 +16,7 @@ struct Context;
 /**
  *  Ensure a usable environment with all necessary library support.
  */
-[[nodiscard]] util::Result<void> SanityChecks(const Context&);
+[[nodiscard]] util::Expected<void, std::string> SanityChecks(const Context&);
 } // namespace kernel
 
 #endif // BITCOIN_KERNEL_CHECKS_H

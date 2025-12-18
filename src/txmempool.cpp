@@ -17,13 +17,12 @@
 #include <random.h>
 #include <tinyformat.h>
 #include <util/check.h>
+#include <util/expected.h>
 #include <util/feefrac.h>
 #include <util/moneystr.h>
 #include <util/overflow.h>
-#include <util/result.h>
 #include <util/time.h>
 #include <util/trace.h>
-#include <util/translation.h>
 #include <validationinterface.h>
 
 #include <algorithm>
@@ -160,17 +159,17 @@ CTxMemPool::setEntries CTxMemPool::CalculateMemPoolAncestors(const CTxMemPoolEnt
     return ret;
 }
 
-static CTxMemPool::Options&& Flatten(CTxMemPool::Options&& opts, bilingual_str& error)
+static CTxMemPool::Options&& Flatten(CTxMemPool::Options&& opts, std::string& error)
 {
     opts.check_ratio = std::clamp<int>(opts.check_ratio, 0, 1'000'000);
     int64_t cluster_limit_bytes = opts.limits.cluster_size_vbytes * 40;
     if (opts.max_size_bytes < 0 || (opts.max_size_bytes > 0 && opts.max_size_bytes < cluster_limit_bytes)) {
-        error = strprintf(_("-maxmempool must be at least %d MB"), std::ceil(cluster_limit_bytes / 1'000'000.0));
+        error = strprintf("-maxmempool must be at least %d MB", std::ceil(cluster_limit_bytes / 1'000'000.0));
     }
     return std::move(opts);
 }
 
-CTxMemPool::CTxMemPool(Options opts, bilingual_str& error)
+CTxMemPool::CTxMemPool(Options opts, std::string& error)
     : m_opts{Flatten(std::move(opts), error)}
 {
     m_txgraph = MakeTxGraph(m_opts.limits.cluster_count, m_opts.limits.cluster_size_vbytes * WITNESS_SCALE_FACTOR, ACCEPTABLE_ITERS);
@@ -974,12 +973,12 @@ std::vector<CTxMemPool::txiter> CTxMemPool::GatherClusters(const std::vector<Txi
     return ret;
 }
 
-util::Result<std::pair<std::vector<FeeFrac>, std::vector<FeeFrac>>> CTxMemPool::ChangeSet::CalculateChunksForRBF()
+util::Expected<std::pair<std::vector<FeeFrac>, std::vector<FeeFrac>>, std::string> CTxMemPool::ChangeSet::CalculateChunksForRBF()
 {
     LOCK(m_pool->cs);
 
     if (!CheckMemPoolPolicyLimits()) {
-        return util::Error{Untranslated("cluster size limit exceeded")};
+        return util::Unexpected{"cluster size limit exceeded"};
     }
 
     return m_pool->m_txgraph->GetMainStagingDiagrams();

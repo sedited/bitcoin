@@ -66,7 +66,7 @@ FUZZ_TARGET(wallet_fees, .init = initialize_setup)
     auto& node{g_setup->m_node};
     Chainstate* chainstate = &node.chainman->ActiveChainstate();
 
-    bilingual_str error;
+    std::string error;
     CTxMemPool::Options mempool_opts{
         .incremental_relay_feerate = CFeeRate{ConsumeMoney(fuzzed_data_provider, 1'000'000)},
         .min_relay_feerate = CFeeRate{ConsumeMoney(fuzzed_data_provider, 1'000'000)},

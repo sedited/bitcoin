@@ -156,11 +156,11 @@ std::unique_ptr<CTxMemPool> MakeMempool(FuzzedDataProvider& fuzzed_data_provider
     mempool_opts.require_standard = fuzzed_data_provider.ConsumeBool();
 
     // ...and construct a CTxMemPool from it
-    bilingual_str error;
+    std::string error;
     auto mempool{std::make_unique<CTxMemPool>(std::move(mempool_opts), error)};
     // ... ignore the error since it might be beneficial to fuzz even when the
     // mempool size is unreasonably small
-    Assert(error.empty() || error.original.starts_with("-maxmempool must be at least "));
+    Assert(error.empty() || error.starts_with("-maxmempool must be at least "));
     return mempool;
 }
 

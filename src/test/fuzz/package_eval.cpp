@@ -131,12 +131,12 @@ std::unique_ptr<CTxMemPool> MakeMempool(FuzzedDataProvider& fuzzed_data_provider
     mempool_opts.check_ratio = 1;
     mempool_opts.require_standard = fuzzed_data_provider.ConsumeBool();
 
-    bilingual_str error;
+    std::string error;
     // ...and construct a CTxMemPool from it
     auto mempool{std::make_unique<CTxMemPool>(std::move(mempool_opts), error)};
     // ... ignore the error since it might be beneficial to fuzz even when the
     // mempool size is unreasonably small
-    Assert(error.empty() || error.original.starts_with("-maxmempool must be at least "));
+    Assert(error.empty() || error.starts_with("-maxmempool must be at least "));
     return mempool;
 }
 
@@ -153,7 +153,7 @@ std::unique_ptr<CTxMemPool> MakeEphemeralMempool(const NodeContext& node)
     // And set minrelay to 0 to allow ephemeral parent tx even with non-TRUC
     mempool_opts.min_relay_feerate = CFeeRate(0);
 
-    bilingual_str error;
+    std::string error;
     // ...and construct a CTxMemPool from it
     auto mempool{std::make_unique<CTxMemPool>(std::move(mempool_opts), error)};
     Assert(error.empty());

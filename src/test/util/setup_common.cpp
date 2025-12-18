@@ -252,7 +252,7 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, TestOpts opts)
         }
     }
 
-    bilingual_str error{};
+    std::string error{};
     m_node.mempool = std::make_unique<CTxMemPool>(MemPoolOptionsForTest(m_node), error);
     Assert(error.empty());
     m_node.warnings = std::make_unique<node::Warnings>();

@@ -34,7 +34,6 @@
 #include <util/result.h>
 #include <util/signalinterrupt.h>
 #include <util/task_runner.h>
-#include <util/translation.h>
 #include <validation.h>
 #include <validationinterface.h>
 
@@ -53,10 +52,6 @@
 
 using kernel::ChainstateRole;
 using util::ImmediateTaskRunner;
-
-// Define G_TRANSLATION_FUN symbol in libbitcoinkernel library so users of the
-// library aren't required to export this symbol
-extern const std::function<std::string(const char*)> G_TRANSLATION_FUN{nullptr};
 
 static const kernel::Context btck_context_static{};
 

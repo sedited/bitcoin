@@ -21,9 +21,9 @@
 #include <sync.h>
 #include <txgraph.h>
 #include <util/epochguard.h>
+#include <util/expected.h>
 #include <util/feefrac.h>
 #include <util/hasher.h>
-#include <util/result.h>
 
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/identity.hpp>
@@ -44,8 +44,6 @@
 
 class CChain;
 class ValidationSignals;
-
-struct bilingual_str;
 
 /** Fake height value used in Coin to signify they are only in the memory pool (since 0.8) */
 static const uint32_t MEMPOOL_HEIGHT = 0x7FFFFFFF;
@@ -310,7 +308,7 @@ public:
      * accepting transactions becomes O(N^2) where N is the number of transactions
      * in the pool.
      */
-    explicit CTxMemPool(Options opts, bilingual_str& error);
+    explicit CTxMemPool(Options opts, std::string& error);
 
     /**
      * If sanity-checking is turned on, check makes sure the pool is
@@ -700,7 +698,7 @@ public:
          *
          * @return old and new diagram pair respectively, or an error string if the conflicts don't match a calculable topology
          */
-        util::Result<std::pair<std::vector<FeeFrac>, std::vector<FeeFrac>>> CalculateChunksForRBF();
+        util::Expected<std::pair<std::vector<FeeFrac>, std::vector<FeeFrac>>, std::string> CalculateChunksForRBF();
 
         size_t GetTxCount() const { return m_entry_vec.size(); }
         const CTransaction& GetAddedTxn(size_t index) const { return m_entry_vec.at(index)->GetTx(); }

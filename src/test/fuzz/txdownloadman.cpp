@@ -171,7 +171,7 @@ FUZZ_TARGET(txdownloadman, .init = initialize)
     SetMockTime(ConsumeTime(fuzzed_data_provider));
 
     // Initialize txdownloadman
-    bilingual_str error;
+    std::string error;
     CTxMemPool pool{MemPoolOptionsForTest(g_setup->m_node), error};
     FastRandomContext det_rand{true};
     node::TxDownloadManager txdownloadman{node::TxDownloadOptions{pool, det_rand, true}};
@@ -296,7 +296,7 @@ FUZZ_TARGET(txdownloadman_impl, .init = initialize)
     SetMockTime(ConsumeTime(fuzzed_data_provider));
 
     // Initialize a TxDownloadManagerImpl
-    bilingual_str error;
+    std::string error;
     CTxMemPool pool{MemPoolOptionsForTest(g_setup->m_node), error};
     FastRandomContext det_rand{true};
     node::TxDownloadManagerImpl txdownload_impl{node::TxDownloadOptions{pool, det_rand, true}};

@@ -59,7 +59,7 @@ FUZZ_TARGET(rbf, .init = initialize_rbf)
         return;
     }
 
-    bilingual_str error;
+    std::string error;
     CTxMemPool pool{MemPoolOptionsForTest(g_setup->m_node), error};
     Assert(error.empty());
 
@@ -102,7 +102,7 @@ FUZZ_TARGET(package_rbf, .init = initialize_package_rbf)
     CMutableTransaction child;
     child.vin.resize(1);
 
-    bilingual_str error;
+    std::string error;
     CTxMemPool pool{MemPoolOptionsForTest(g_setup->m_node), error};
     Assert(error.empty());
 

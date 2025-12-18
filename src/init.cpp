@@ -1150,7 +1150,7 @@ bool AppInitSanityChecks(const kernel::Context& kernel)
     // ********************************************************* Step 4: sanity checks
     auto result{kernel::SanityChecks(kernel)};
     if (!result) {
-        InitError(util::ErrorString(result));
+        InitError(Untranslated(result.error()));
         return InitError(strprintf(_("Initialization sanity check failed. %s is shutting down."), CLIENT_NAME));
     }
 
@@ -1291,11 +1291,11 @@ static ChainstateLoadResult InitAndLoadChainstate(
         .signals = node.validation_signals.get(),
     };
     Assert(ApplyArgsManOptions(args, chainparams, mempool_opts)); // no error can happen, already checked in AppInitParameterInteraction
-    bilingual_str mempool_error;
+    std::string mempool_error;
     Assert(!node.mempool); // Was reset above
     node.mempool = std::make_unique<CTxMemPool>(mempool_opts, mempool_error);
     if (!mempool_error.empty()) {
-        return {ChainstateLoadStatus::FAILURE_FATAL, mempool_error};
+        return {ChainstateLoadStatus::FAILURE_FATAL, Untranslated(mempool_error)};
     }
     LogInfo("* Using %.1f MiB for in-memory UTXO set (plus up to %.1f MiB of unused mempool space)",
             cache_sizes.coins * (1.0 / 1024 / 1024),

@@ -55,7 +55,7 @@ struct MinerTestingSetup : public TestingSetup {
         // pointer is not accessed, when the new one should be accessed
         // instead.
         m_node.mempool.reset();
-        bilingual_str error;
+        std::string error;
         auto opts = MemPoolOptionsForTest(m_node);
         // The "block size > limit" test creates a cluster of 1192590 vbytes,
         // so set the cluster vbytes limit big enough so that the txgraph

@@ -11,6 +11,7 @@
 #include <txmempool.h>
 #include <util/check.h>
 #include <util/hasher.h>
+#include <tinyformat.h>
 
 #include <algorithm>
 #include <cstdint>
