@@ -12,6 +12,7 @@
 #include <compat/compat.h>
 #include <interfaces/init.h>
 #include <key.h>
+#include <license.h>
 #include <logging.h>
 #include <pubkey.h>
 #include <tinyformat.h>

@@ -13,6 +13,7 @@
 #include <common/system.h>
 #include <compat/compat.h>
 #include <core_io.h>
+#include <license.h>
 #include <streams.h>
 #include <util/exception.h>
 #include <util/strencodings.h>
