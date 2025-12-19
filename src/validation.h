@@ -30,6 +30,7 @@
 #include <uint256.h>
 #include <util/byte_units.h>
 #include <util/check.h>
+#include <util/expected.h>
 #include <util/fs.h>
 #include <util/hasher.h>
 #include <util/result.h>
@@ -527,6 +528,9 @@ enum class Assumeutxo {
     INVALID,
 };
 
+struct BIP30ValidatedTag {};
+struct BIP30ValidationFailed {};
+
 /**
  * Chainstate stores and provides an API to update our local knowledge of the
  * current best chain.
@@ -786,7 +790,7 @@ public:
     bool ConnectBlock(const CBlock& block, const CBlockUndo& blockundo, BlockValidationState& state,
                       CBlockIndex* pindex, bool fJustCheck = false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
-    bool BIP30Validate(const CBlock& block, const CBlockIndex* pindex, const CCoinsViewCache& view, BlockValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    util::Expected<BIP30ValidatedTag, BIP30ValidationFailed> BIP30Validate(const CBlock& block, const CBlockIndex* pindex, const CCoinsViewCache& view, BlockValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     /**
      * Spends the coins associated with a block. First checks that the block
@@ -801,7 +805,7 @@ public:
      * @param[out] blockundo Coins consumed by the block are added to it.
      */
     bool SpendBlock(const CBlock& block, const CBlockIndex* pindex,
-                    CCoinsViewCache& view, BlockValidationState& state, CBlockUndo& blockundo) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+                    CCoinsViewCache& view, BlockValidationState& state, CBlockUndo& blockundo, BIP30ValidatedTag tag) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     // Apply the effects of a block disconnection on the UTXO set.
     bool DisconnectTip(BlockValidationState& state, DisconnectedBlockTransactions* disconnectpool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_mempool->cs);

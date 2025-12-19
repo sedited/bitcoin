@@ -2833,7 +2833,7 @@ static void UpdateTipLog(
                    !warning_messages.empty() ? strprintf(" warning='%s'", warning_messages) : "");
 }
 
-bool Chainstate::BIP30Validate(
+util::Expected<BIP30ValidatedTag, BIP30ValidationFailed> Chainstate::BIP30Validate(
     const CBlock& block,
     const CBlockIndex* pindex,
     const CCoinsViewCache& view,
@@ -2848,7 +2848,7 @@ bool Chainstate::BIP30Validate(
     // Special case for the genesis block, skipping connection of its transactions
     // (its coinbase is unspendable)
     if (block_hash == params.GetConsensus().hashGenesisBlock) {
-        return true;
+        return BIP30ValidatedTag{};
     }
 
     // verify that the view's current state corresponds to the previous block
@@ -2936,8 +2936,9 @@ bool Chainstate::BIP30Validate(
         for (const auto& tx : block.vtx) {
             for (size_t o = 0; o < tx->vout.size(); o++) {
                 if (view.HaveCoin(COutPoint(tx->GetHash(), o))) {
-                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-BIP30",
+                    state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-BIP30",
                                   "tried to overwrite transaction");
+                    return util::Unexpected{BIP30ValidationFailed{}};
                 }
             }
         }
@@ -2951,7 +2952,7 @@ bool Chainstate::BIP30Validate(
              Ticks<SecondsDouble>(m_chainman.time_connect),
              m_chainman.num_blocks_total == 0 ? 0 : Ticks<MillisecondsDouble>(m_chainman.time_connect) / m_chainman.num_blocks_total);
 
-    return true;
+    return BIP30ValidatedTag{};
 }
 
 bool Chainstate::SpendBlock(
@@ -2959,7 +2960,8 @@ bool Chainstate::SpendBlock(
     const CBlockIndex* pindex,
     CCoinsViewCache& view,
     BlockValidationState& state,
-    CBlockUndo& blockundo)
+    CBlockUndo& blockundo,
+    BIP30ValidatedTag tag)
 {
     AssertLockHeld(cs_main);
     assert(pindex);
@@ -3199,7 +3201,8 @@ bool Chainstate::ConnectTip(
              Ticks<MillisecondsDouble>(time_2 - time_1));
     {
         CCoinsViewCache view(&CoinsTip());
-        if (!BIP30Validate(*block_to_connect, pindexNew, view, state)) {
+        auto res = BIP30Validate(*block_to_connect, pindexNew, view, state);
+        if (!res) {
             assert(state.IsInvalid());
             if (m_chainman.m_options.signals) {
                 m_chainman.m_options.signals->BlockChecked(block_to_connect, state);
@@ -3209,7 +3212,7 @@ bool Chainstate::ConnectTip(
             return false;
         }
         CBlockUndo blockundo;
-        if (!SpendBlock(*block_to_connect, pindexNew, view, state, blockundo)) {
+        if (!SpendBlock(*block_to_connect, pindexNew, view, state, blockundo, res.value())) {
             assert(state.IsInvalid());
             if (m_chainman.m_options.signals) {
                 m_chainman.m_options.signals->BlockChecked(block_to_connect, state);
@@ -4710,13 +4713,14 @@ BlockValidationState TestBlockValidity(
     index_dummy.phashBlock = &block_hash;
     CCoinsViewCache view_dummy(&chainstate.CoinsTip());
 
-    if (!chainstate.BIP30Validate(block, &index_dummy, view_dummy, state)) {
+    auto res {chainstate.BIP30Validate(block, &index_dummy, view_dummy, state)};
+    if (!res) {
         if (state.IsValid()) NONFATAL_UNREACHABLE();
         return state;
     }
 
     CBlockUndo blockundo;
-    if (!chainstate.SpendBlock(block, &index_dummy, view_dummy, state, blockundo)) {
+    if (!chainstate.SpendBlock(block, &index_dummy, view_dummy, state, blockundo, res.value())) {
         if (state.IsValid()) NONFATAL_UNREACHABLE();
         return state;
     }
@@ -4928,12 +4932,13 @@ VerifyDBResult CVerifyDB::VerifyDB(
                 LogError("Verification error: ReadBlock failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
                 return VerifyDBResult::CORRUPTED_BLOCK_DB;
             }
-            if (!chainstate.BIP30Validate(block, pindex, coins, state)) {
+            auto res{chainstate.BIP30Validate(block, pindex, coins, state)};
+            if (!res) {
                 LogError("BIP30Validate failed %s\n", state.ToString());
                 return VerifyDBResult::CORRUPTED_BLOCK_DB;
             }
             CBlockUndo blockundo;
-            if (!chainstate.SpendBlock(block, pindex, coins, state, blockundo)) {
+            if (!chainstate.SpendBlock(block, pindex, coins, state, blockundo, res.value())) {
                 LogError("SpendBlock failed %s\n", state.ToString());
                 return VerifyDBResult::CORRUPTED_BLOCK_DB;
             }

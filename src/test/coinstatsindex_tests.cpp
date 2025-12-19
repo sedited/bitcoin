@@ -100,9 +100,10 @@ BOOST_FIXTURE_TEST_CASE(coinstatsindex_unclean_shutdown, TestChain100Setup)
             BOOST_CHECK(CheckBlock(block, state, params.GetConsensus()));
             BOOST_CHECK(m_node.chainman->AcceptBlock(new_block, state, &new_block_index, true, nullptr, nullptr, true));
             CCoinsViewCache view(&chainstate.CoinsTip());
-            BOOST_CHECK(chainstate.BIP30Validate(block, new_block_index, view, state));
+            auto res{chainstate.BIP30Validate(block, new_block_index, view, state)};
+            BOOST_CHECK(res);
             CBlockUndo blockundo;
-            BOOST_CHECK(chainstate.SpendBlock(block, new_block_index, view, state, blockundo));
+            BOOST_CHECK(chainstate.SpendBlock(block, new_block_index, view, state, blockundo, res.value()));
             BOOST_CHECK(chainstate.ConnectBlock(block, blockundo, state, new_block_index));
         }
         // Send block connected notification, then stop the index without
