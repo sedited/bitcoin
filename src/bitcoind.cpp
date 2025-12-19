@@ -15,6 +15,7 @@
 #include <interfaces/chain.h>
 #include <interfaces/init.h>
 #include <kernel/context.h>
+#include <license.h>
 #include <node/context.h>
 #include <node/interface_ui.h>
 #include <node/warnings.h>

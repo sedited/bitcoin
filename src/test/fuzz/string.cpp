@@ -9,6 +9,7 @@
 #include <common/settings.h>
 #include <common/system.h>
 #include <common/url.h>
+#include <license.h>
 #include <netbase.h>
 #include <outputtype.h>
 #include <rpc/client.h>
