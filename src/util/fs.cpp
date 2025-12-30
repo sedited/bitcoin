@@ -27,7 +27,9 @@ FILE *fopen(const fs::path& p, const char *mode)
 #ifndef WIN32
     return ::fopen(p.c_str(), mode);
 #else
-    return ::fopen(p.utf8string().c_str(), mode);
+    // return ::fopen(p.utf8string().c_str(), mode);
+    std::wstring wmode(mode, mode + strlen(mode));
+    return ::_wfopen(p.wstring().c_str(), wmode.c_str());
 #endif
 }
 

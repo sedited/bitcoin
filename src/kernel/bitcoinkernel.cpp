@@ -56,7 +56,7 @@ using util::ImmediateTaskRunner;
 
 // Define G_TRANSLATION_FUN symbol in libbitcoinkernel library so users of the
 // library aren't required to export this symbol
-extern const std::function<std::string(const char*)> G_TRANSLATION_FUN{nullptr};
+extern const TranslateFn G_TRANSLATION_FUN{nullptr};
 
 static const kernel::Context btck_context_static{};
 
@@ -927,6 +927,7 @@ btck_ChainstateManagerOptions* btck_chainstate_manager_options_create(const btck
     }
     try {
         fs::path abs_data_dir{fs::absolute(fs::PathFromString({data_dir, data_dir_len}))};
+        assert(fs::exists(abs_data_dir));
         fs::create_directories(abs_data_dir);
         fs::path abs_blocks_dir{fs::absolute(fs::PathFromString({blocks_dir, blocks_dir_len}))};
         fs::create_directories(abs_blocks_dir);
@@ -986,6 +987,8 @@ btck_ChainstateManager* btck_chainstate_manager_create(
     std::unique_ptr<ChainstateManager> chainman;
     try {
         LOCK(opts.m_mutex);
+        LogInfo("Creating directory: %s", fs::PathToString(opts.m_chainman_options.datadir));
+        assert(fs::exists(opts.m_chainman_options.datadir));
         chainman = std::make_unique<ChainstateManager>(*opts.m_context->m_interrupt, opts.m_chainman_options, opts.m_blockman_options);
     } catch (const std::exception& e) {
         LogError("Failed to create chainstate manager: %s", e.what());
