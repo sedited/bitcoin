@@ -1830,7 +1830,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     // requested to kill the GUI during the last operation. If so, exit.
     if (ShutdownRequested(node)) {
         LogInfo("Shutdown requested. Exiting.");
-        return false;
+        return true;
     }
 
     ChainstateManager& chainman = *Assert(node.chainman);
