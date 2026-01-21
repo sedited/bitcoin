@@ -683,22 +683,22 @@ bool BlockManager::ReadBlockUndo(CBlockUndo& blockundo, const CBlockIndex& index
     const FlatFilePos pos{WITH_LOCK(::cs_main, return index.GetUndoPos())};
 
     // Open history file to read
-    AutoFile file{OpenUndoFile(pos, true)};
-    if (file.IsNull()) {
+    auto reader{m_undo_store->MakeBlockStorageReader(pos)};
+    if (!reader->IsValid()) {
         LogError("OpenUndoFile failed for %s while reading block undo", pos.ToString());
         return false;
     }
-    BufferedReader filein{std::move(file)};
+    BufferedReader buffered_reader{std::move(reader)};
 
     try {
         // Read block
-        HashVerifier verifier{filein}; // Use HashVerifier, as reserializing may lose data, c.f. commit d3424243
+        HashVerifier verifier{buffered_reader}; // Use HashVerifier, as reserializing may lose data, c.f. commit d3424243
 
         verifier << index.pprev->GetBlockHash();
         verifier >> blockundo;
 
         uint256 hashChecksum;
-        filein >> hashChecksum;
+        buffered_reader >> hashChecksum;
 
         // Verify checksum
         if (hashChecksum != verifier.GetHash()) {
@@ -716,7 +716,7 @@ bool BlockManager::ReadBlockUndo(CBlockUndo& blockundo, const CBlockIndex& index
 bool BlockManager::FlushUndoFile(int block_file, bool finalize)
 {
     FlatFilePos undo_pos_old(block_file, m_blockfile_info[block_file].nUndoSize);
-    if (!m_undo_file_seq.Flush(undo_pos_old, finalize)) {
+    if (!m_undo_store->Flush(undo_pos_old, finalize)) {
         m_opts.notifications.flushError(_("Flushing undo file to disk failed. This is likely the result of an I/O error."));
         return false;
     }
@@ -738,7 +738,7 @@ bool BlockManager::FlushBlockFile(int blockfile_num, bool fFinalize, bool finali
     assert(static_cast<int>(m_blockfile_info.size()) > blockfile_num);
 
     FlatFilePos block_pos_old(blockfile_num, m_blockfile_info[blockfile_num].nSize);
-    if (!m_block_file_seq.Flush(block_pos_old, fFinalize)) {
+    if (!m_block_store->Flush(block_pos_old, fFinalize)) {
         m_opts.notifications.flushError(_("Flushing block file to disk failed. This is likely the result of an I/O error."));
         success = false;
     }
@@ -790,8 +790,8 @@ void BlockManager::UnlinkPrunedFiles(const std::set<int>& setFilesToPrune) const
     std::error_code ec;
     for (std::set<int>::iterator it = setFilesToPrune.begin(); it != setFilesToPrune.end(); ++it) {
         FlatFilePos pos(*it, 0);
-        const bool removed_blockfile{fs::remove(m_block_file_seq.FileName(pos), ec)};
-        const bool removed_undofile{fs::remove(m_undo_file_seq.FileName(pos), ec)};
+        const bool removed_blockfile{m_block_store->Remove(pos, ec)};
+        const bool removed_undofile{m_undo_store->Remove(pos, ec)};
         if (removed_blockfile || removed_undofile) {
             LogDebug(BCLog::BLOCKSTORAGE, "Prune: %s deleted blk/rev (%05u)\n", __func__, *it);
         }
@@ -804,10 +804,10 @@ AutoFile BlockManager::OpenBlockFile(const FlatFilePos& pos, bool fReadOnly) con
 }
 
 /** Open an undo file (rev?????.dat) */
-AutoFile BlockManager::OpenUndoFile(const FlatFilePos& pos, bool fReadOnly) const
-{
-    return AutoFile{m_undo_file_seq.Open(pos, fReadOnly), m_obfuscation};
-}
+// AutoFile BlockManager::OpenUndoFile(const FlatFilePos& pos, bool fReadOnly) const
+// {
+//     return AutoFile{m_undo_file_seq.Open(pos, fReadOnly), m_obfuscation};
+// }
 
 fs::path BlockManager::GetBlockPosFilename(const FlatFilePos& pos) const
 {
@@ -937,7 +937,7 @@ bool BlockManager::FindUndoPos(BlockValidationState& state, int nFile, FlatFileP
     m_dirty_fileinfo.insert(nFile);
 
     bool out_of_space;
-    size_t bytes_allocated = m_undo_file_seq.Allocate(pos, nAddSize, out_of_space);
+    size_t bytes_allocated = m_undo_store->Allocate(pos, nAddSize, out_of_space);
     if (out_of_space) {
         return FatalError(m_opts.notifications, state, _("Disk space is too low!"));
     }
@@ -964,29 +964,29 @@ bool BlockManager::WriteBlockUndo(const CBlockUndo& blockundo, BlockValidationSt
         }
 
         // Open history file to append
-        AutoFile file{OpenUndoFile(pos)};
-        if (file.IsNull()) {
+        auto writer{m_undo_store->MakeBlockStorageWriter(pos)};
+        if (!writer->IsValid()) {
             LogError("OpenUndoFile failed for %s while writing block undo", pos.ToString());
             return FatalError(m_opts.notifications, state, _("Failed to write undo data."));
         }
         {
-            BufferedWriter fileout{file};
+            BufferedWriter buffered_writer{writer};
 
             // Write index header
-            fileout << GetParams().MessageStart() << blockundo_size;
+            buffered_writer << GetParams().MessageStart() << blockundo_size;
             pos.nPos += STORAGE_HEADER_BYTES;
             {
                 // Calculate checksum
                 HashWriter hasher{};
                 hasher << block.pprev->GetBlockHash() << blockundo;
                 // Write undo data & checksum
-                fileout << blockundo << hasher.GetHash();
+                buffered_writer << blockundo << hasher.GetHash();
             }
             // BufferedWriter will flush pending data to file when fileout goes out of scope.
         }
 
         // Make sure that the file is closed before we call `FlushUndoFile`.
-        if (file.fclose() != 0) {
+        if (writer->close() != 0) {
             LogError("Failed to close block undo file %s: %s", pos.ToString(), SysErrorString(errno));
             return FatalError(m_opts.notifications, state, _("Failed to close block undo file."));
         }
@@ -1073,8 +1073,9 @@ BlockManager::ReadRawBlockResult BlockManager::ReadRawBlock(const FlatFilePos& p
         LogError("Failed for %s while reading raw block storage header", pos.ToString());
         return util::Unexpected{ReadRawError::IO};
     }
-    AutoFile filein{OpenBlockFile({pos.nFile, pos.nPos - STORAGE_HEADER_BYTES}, /*fReadOnly=*/true)};
-    if (filein.IsNull()) {
+    // AutoFile filein{OpenBlockFile({pos.nFile, pos.nPos - STORAGE_HEADER_BYTES}, /*fReadOnly=*/true)};
+    auto reader{m_block_store->MakeBlockStorageReader({pos.nFile, pos.nPos - STORAGE_HEADER_BYTES})};
+    if (!reader->IsValid()) {
         LogError("OpenBlockFile failed for %s while reading raw block", pos.ToString());
         return util::Unexpected{ReadRawError::IO};
     }
@@ -1083,7 +1084,7 @@ BlockManager::ReadRawBlockResult BlockManager::ReadRawBlock(const FlatFilePos& p
         MessageStartChars blk_start;
         unsigned int blk_size;
 
-        filein >> blk_start >> blk_size;
+        *reader >> blk_start >> blk_size;
 
         if (blk_start != GetParams().MessageStart()) {
             LogError("Block magic mismatch for %s: %s versus expected %s while reading raw block",
@@ -1107,7 +1108,7 @@ BlockManager::ReadRawBlockResult BlockManager::ReadRawBlock(const FlatFilePos& p
         }
 
         std::vector<std::byte> data(blk_size); // Zeroing of memory is intentional here
-        filein.read(data);
+        reader->read(data);
         return data;
     } catch (const std::exception& e) {
         LogError("Read from block file failed: %s for %s while reading raw block", e.what(), pos.ToString());
@@ -1210,7 +1211,8 @@ BlockManager::BlockManager(const util::SignalInterrupt& interrupt, Options opts)
       m_obfuscation{InitBlocksdirXorKey(opts)},
       m_opts{std::move(opts)},
       m_block_file_seq{FlatFileSeq{m_opts.blocks_dir, "blk", m_opts.fast_prune ? 0x4000 /* 16kB */ : BLOCKFILE_CHUNK_SIZE}},
-      m_undo_file_seq{FlatFileSeq{m_opts.blocks_dir, "rev", UNDOFILE_CHUNK_SIZE}},
+      m_undo_store{std::make_unique<FileBlockStore>(m_opts.blocks_dir, "rev", UNDOFILE_CHUNK_SIZE)},
+      m_block_store{std::make_unique<FileBlockStore>(m_opts.blocks_dir, "blk", m_opts.fast_prune ? 0x4000 /* 16 kB*/ : BLOCKFILE_CHUNK_SIZE)},
       m_interrupt{interrupt}
 {
     m_block_tree_db = std::make_unique<BlockTreeDB>(m_opts.block_tree_db_params);
@@ -1249,7 +1251,7 @@ void ImportBlocks(ChainstateManager& chainman, std::span<const fs::path> import_
     // -reindex
     if (!chainman.m_blockman.m_blockfiles_indexed) {
         int total_files{0};
-        while (fs::exists(chainman.m_blockman.GetBlockPosFilename(FlatFilePos(total_files, 0)))) {
+        while (chainman.m_blockman.m_block_store->Exists(FlatFilePos{total_files, 0})) {
             total_files++;
         }
 
