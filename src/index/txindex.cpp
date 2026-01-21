@@ -99,16 +99,17 @@ bool TxIndex::FindTx(const Txid& tx_hash, uint256& block_hash, CTransactionRef& 
         return false;
     }
 
-    AutoFile file{m_chainstate->m_blockman.OpenBlockFile(postx, true)};
-    if (file.IsNull()) {
+    // AutoFile file{m_chainstate->m_blockman.OpenBlockFile(postx, true)};
+    auto reader{m_chainstate->m_blockman.m_block_store->MakeBlockStorageReader(postx)};
+    if (!reader->IsValid()) {
         LogError("OpenBlockFile failed");
         return false;
     }
     CBlockHeader header;
     try {
-        file >> header;
-        file.seek(postx.nTxOffset, SEEK_CUR);
-        file >> TX_WITH_WITNESS(tx);
+        *reader >> header;
+        reader->seek(postx.nTxOffset, SEEK_CUR);
+        *reader >> TX_WITH_WITNESS(tx);
     } catch (const std::exception& e) {
         LogError("Deserialize or I/O error - %s", e.what());
         return false;
