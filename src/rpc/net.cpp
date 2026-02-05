@@ -619,11 +619,11 @@ static UniValue GetNetworksInfo()
         if (network == NET_UNROUTABLE || network == NET_INTERNAL) continue;
         Proxy proxy;
         UniValue obj(UniValue::VOBJ);
-        GetProxy(network, proxy);
+        const bool is_valid{GetProxy(network, proxy)};
         obj.pushKV("name", GetNetworkName(network));
         obj.pushKV("limited", !g_reachable_nets.Contains(network));
         obj.pushKV("reachable", g_reachable_nets.Contains(network));
-        obj.pushKV("proxy", proxy.IsValid() ? proxy.ToString() : std::string());
+        obj.pushKV("proxy", is_valid ? proxy.ToString() : std::string{});
         obj.pushKV("proxy_randomize_credentials", proxy.m_tor_stream_isolation);
         networks.push_back(std::move(obj));
     }

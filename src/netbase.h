@@ -179,7 +179,7 @@ std::string GetNetworkName(enum Network net);
 /** Return a vector of publicly routable Network names; optionally append NET_UNROUTABLE. */
 std::vector<std::string> GetNetworkNames(bool append_unroutable = false);
 bool SetProxy(enum Network net, const Proxy &addrProxy);
-bool GetProxy(enum Network net, Proxy &proxyInfoOut);
+[[nodiscard]] bool GetProxy(enum Network net, Proxy& proxyInfoOut);
 bool IsProxy(const CNetAddr &addr);
 /**
  * Set the name proxy to use for all connections to nodes specified by a
