@@ -389,7 +389,7 @@ protected:
      * Get settings file path, or return false if read-write settings were
      * disabled with -nosettings.
      */
-    bool GetSettingsPath(fs::path* filepath = nullptr, bool temp = false, bool backup = false) const;
+    [[nodiscard]] bool GetSettingsPath(fs::path* filepath = nullptr, bool temp = false, bool backup = false) const;
 
     /**
      * Read settings file. Push errors to vector, or log them if null.

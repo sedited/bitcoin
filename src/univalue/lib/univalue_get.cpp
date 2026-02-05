@@ -25,7 +25,7 @@ static bool ParsePrechecks(const std::string& str)
     return true;
 }
 
-bool ParseDouble(const std::string& str, double *out)
+[[nodiscard]] bool ParseDouble(const std::string& str, double* out)
 {
     if (!ParsePrechecks(str))
         return false;

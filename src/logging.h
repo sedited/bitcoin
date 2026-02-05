@@ -365,7 +365,7 @@ static inline bool LogAcceptCategory(BCLog::LogFlags category, BCLog::Level leve
 }
 
 /** Return true if str parses as a log category and set the flag */
-bool GetLogCategory(BCLog::LogFlags& flag, std::string_view str);
+[[nodiscard]] bool GetLogCategory(BCLog::LogFlags& flag, std::string_view str);
 
 template <typename... Args>
 inline void LogPrintFormatInternal(SourceLocation&& source_loc, BCLog::LogFlags flag, BCLog::Level level, bool should_ratelimit, util::ConstevalFormatString<sizeof...(Args)> fmt, const Args&... args)
