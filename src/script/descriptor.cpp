@@ -549,7 +549,7 @@ public:
         CExtKey lh_xprv;
         // If we have the cache, just get the parent xpub
         if (cache != nullptr) {
-            cache->GetCachedLastHardenedExtPubKey(m_expr_index, xpub);
+            (void)cache->GetCachedLastHardenedExtPubKey(m_expr_index, xpub);
         }
         if (!xpub.pubkey.IsValid()) {
             // Cache miss, or nor cache, or need privkey
