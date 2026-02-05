@@ -2158,7 +2158,7 @@ size_t CountWitnessSigOps(const CScript& scriptSig, const CScript& scriptPubKey,
         std::vector<unsigned char> data;
         while (pc < scriptSig.end()) {
             opcodetype opcode;
-            scriptSig.GetOp(pc, opcode, data);
+            (void)scriptSig.GetOp(pc, opcode, data);
         }
         CScript subscript(data.begin(), data.end());
         if (subscript.IsWitnessProgram(witnessversion, witnessprogram)) {
