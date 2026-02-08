@@ -24,10 +24,6 @@ constexpr int DEFAULT_TOR_CONTROL_PORT = 9051;
 extern const std::string DEFAULT_TOR_CONTROL;
 static const bool DEFAULT_LISTEN_ONION = true;
 
-void StartTorControl(CService onion_service_target);
-void InterruptTorControl();
-void StopTorControl();
-
 CService DefaultOnionServiceTarget(uint16_t port);
 
 /** Reply from Tor, can be single or multi-line */
