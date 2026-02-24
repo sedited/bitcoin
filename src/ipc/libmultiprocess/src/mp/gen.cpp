@@ -210,7 +210,9 @@ static void Generate(kj::StringPtr src_prefix,
     cpp_server << "#include <cstring>\n";
     cpp_server << "#include <kj/async.h>\n";
     cpp_server << "#include <kj/common.h>\n";
+    cpp_server << "#pragma GCC visibility push(default)\n";
     cpp_server << "#include <kj/exception.h>\n";
+    cpp_server << "#pragma GCC visibility pop\n";
     cpp_server << "#include <kj/tuple.h>\n";
     cpp_server << "#include <mp/proxy.h>\n";
     cpp_server << "#include <mp/util.h>\n";
