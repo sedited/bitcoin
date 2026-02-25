@@ -82,7 +82,7 @@ private:
     void processSendCoinsReturn(const WalletModel::SendCoinsReturn &sendCoinsReturn, const QString &msgArg = QString());
     void minimizeFeeSection(bool fMinimize);
     // Format confirmation message
-    bool PrepareSendText(QString& question_string, QString& informative_text, QString& detailed_text);
+    [[nodiscard]] bool PrepareSendText(QString& question_string, QString& informative_text, QString& detailed_text);
     /* Sign PSBT using external signer.
      *
      * @param[in,out] psbtx the PSBT to sign
@@ -91,7 +91,7 @@ private:
      *
      * @returns false if any failure occurred, which may include the user rejection of a transaction on the device.
      */
-    bool signWithExternalSigner(PartiallySignedTransaction& psbt, CMutableTransaction& mtx, bool& complete);
+    [[nodiscard]] bool signWithExternalSigner(PartiallySignedTransaction& psbt, CMutableTransaction& mtx, bool& complete);
     void updateFeeMinimizedLabel();
     void updateCoinControlState();
 

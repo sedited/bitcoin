@@ -85,7 +85,7 @@ public:
     static inline const FontChoice UseBestSystemFont{FontChoiceAbstract::BestSystemFont};
     static QFont getFontForChoice(const FontChoice& fc);
 
-    bool Init(bilingual_str& error);
+    [[nodiscard]] bool Init(bilingual_str& error);
     void Reset();
 
     int rowCount(const QModelIndex & parent = QModelIndex()) const override;

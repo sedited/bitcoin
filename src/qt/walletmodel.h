@@ -130,7 +130,7 @@ public:
 
     UnlockContext requestUnlock();
 
-    bool bumpFee(Txid hash, Txid& new_hash);
+    [[nodiscard]] bool bumpFee(Txid hash, Txid& new_hash);
     void displayAddress(std::string sAddress) const;
 
     static bool isWalletEnabled();

@@ -89,7 +89,7 @@ public:
     QString dataDir() const;
     QString blocksDir() const;
 
-    bool getProxyInfo(std::string& ip_port) const;
+    [[nodiscard]] bool getProxyInfo(std::string& ip_port) const;
 
     // caches for the best header: hash, number of blocks and block time
     mutable std::atomic<int> cachedBestHeaderHeight;

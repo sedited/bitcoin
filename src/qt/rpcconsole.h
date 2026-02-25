@@ -48,8 +48,8 @@ public:
     explicit RPCConsole(interfaces::Node& node, const PlatformStyle *platformStyle, QWidget *parent);
     ~RPCConsole();
 
-    static bool RPCParseCommandLine(interfaces::Node* node, std::string& strResult, const std::string& strCommand, bool fExecute, std::string* pstrFilteredOut = nullptr, const QString& wallet_name = {});
-    static bool RPCExecuteCommandLine(interfaces::Node& node, std::string &strResult, const std::string &strCommand, std::string * const pstrFilteredOut = nullptr, const QString& wallet_name = {}) {
+    [[nodiscard]] static bool RPCParseCommandLine(interfaces::Node* node, std::string& strResult, const std::string& strCommand, bool fExecute, std::string* pstrFilteredOut = nullptr, const QString& wallet_name = {});
+    [[nodiscard]] static bool RPCExecuteCommandLine(interfaces::Node& node, std::string &strResult, const std::string &strCommand, std::string * const pstrFilteredOut = nullptr, const QString& wallet_name = {}) {
         return RPCParseCommandLine(&node, strResult, strCommand, true, pstrFilteredOut, wallet_name);
     }
 

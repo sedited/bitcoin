@@ -81,7 +81,7 @@ public:
      * It must hold that input.size() + LENGTH_LEN == contents.size() + EXPANSION.
      * Contents.size() must equal the length returned by DecryptLength.
      */
-    bool Decrypt(std::span<const std::byte> input, std::span<const std::byte> aad, bool& ignore, std::span<std::byte> contents) noexcept;
+    [[nodiscard]] bool Decrypt(std::span<const std::byte> input, std::span<const std::byte> aad, bool& ignore, std::span<std::byte> contents) noexcept;
 
     /** Get the Session ID. Only after Initialize(). */
     std::span<const std::byte> GetSessionID() const noexcept { return m_session_id; }

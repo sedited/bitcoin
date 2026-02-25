@@ -357,7 +357,7 @@ public:
     bool IsHDEnabled() const override;
 
     //! Setup descriptors based on the given CExtkey
-    bool SetupDescriptorGeneration(WalletBatch& batch, const CExtKey& master_key, OutputType addr_type, bool internal);
+    [[nodiscard]] bool SetupDescriptorGeneration(WalletBatch& batch, const CExtKey& master_key, OutputType addr_type, bool internal);
 
     bool HavePrivateKeys() const override;
     bool HasPrivKey(const CKeyID& keyid) const EXCLUSIVE_LOCKS_REQUIRED(cs_desc_man);
@@ -375,7 +375,7 @@ public:
 
     std::unique_ptr<SigningProvider> GetSolvingProvider(const CScript& script) const override;
 
-    bool CanProvide(const CScript& script, SignatureData& sigdata) override;
+    [[nodiscard]] bool CanProvide(const CScript& script, SignatureData& sigdata) override;
 
     // Fetch the SigningProvider for the given pubkey and always include private keys. This should only be called by signing code.
     std::unique_ptr<FlatSigningProvider> GetSigningProvider(const CPubKey& pubkey) const;

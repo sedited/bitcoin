@@ -122,7 +122,7 @@ void TestBIP324PacketVector(
             unsigned use_idx = i < in_idx ? i : 0;
             bool dec_ignore{false};
             dec_cipher.DecryptLength(std::span{dummies[use_idx]}.first(cipher.LENGTH_LEN));
-            dec_cipher.Decrypt(std::span{dummies[use_idx]}.subspan(cipher.LENGTH_LEN), {}, dec_ignore, {});
+            (void)dec_cipher.Decrypt(std::span{dummies[use_idx]}.subspan(cipher.LENGTH_LEN), {}, dec_ignore, {});
         }
 
         // Construct copied (and possibly damaged) copy of ciphertext.

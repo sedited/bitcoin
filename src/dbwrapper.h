@@ -204,7 +204,7 @@ public:
     CDBWrapper& operator=(const CDBWrapper&) = delete;
 
     template <typename K, typename V>
-    bool Read(const K& key, V& value) const
+    [[nodiscard]] bool Read(const K& key, V& value) const
     {
         DataStream ssKey{};
         ssKey.reserve(DBWRAPPER_PREALLOC_KEY_SIZE);
