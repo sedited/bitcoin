@@ -120,7 +120,7 @@ static bool HTTPReq_JSONRPC(const std::any& context, HTTPRequest* req)
     jreq.context = context;
     jreq.peerAddr = req->GetPeer().ToStringAddrPort();
     if (!RPCAuthorized(authHeader.second, jreq.authUser)) {
-        LogWarning("ThreadRPCServer incorrect password attempt from %s", jreq.peerAddr);
+        LogWarning("ThreadRPCServer incorrect password attempt%s", fLogIPs ? strprintf(" from %s", jreq.peerAddr) : "");
 
         /* Deter brute-forcing
            If this results in a DoS the user really

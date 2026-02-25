@@ -390,7 +390,7 @@ CNode* CConnman::ConnectNode(CAddress addrConnect,
 
         // Look for an existing connection
         if (AlreadyConnectedToAddressPort(addrConnect)) {
-            LogInfo("Failed to open new connection to %s, already connected", addrConnect.ToStringAddrPort());
+            LogInfo("Failed to open new connection to %s, already connected", fLogIPs ? addrConnect.ToStringAddrPort() : "[redacted]");
             return nullptr;
         }
     }
@@ -1783,12 +1783,12 @@ void CConnman::CreateNodeFromAcceptedSocket(std::unique_ptr<Sock>&& sock,
     }
 
     if (!fNetworkActive) {
-        LogDebug(BCLog::NET, "connection from %s dropped: not accepting new connections\n", addr.ToStringAddrPort());
+        LogDebug(BCLog::NET, "connection from %s dropped: not accepting new connections", fLogIPs ? addr.ToStringAddrPort() : "[redacted]");
         return;
     }
 
     if (!sock->IsSelectable()) {
-        LogInfo("connection from %s dropped: non-selectable socket\n", addr.ToStringAddrPort());
+        LogInfo("connection from %s dropped: non-selectable socket", fLogIPs ? addr.ToStringAddrPort() : "[redacted]");
         return;
     }
 
