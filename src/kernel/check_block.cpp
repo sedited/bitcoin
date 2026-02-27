@@ -117,4 +117,17 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
     return true;
 }
 
+std::optional<CheckedBlock> CheckBlockSafe(CBlock block, BlockValidationState& state, const Consensus::Params& consensus_params)
+{
+    if (block.fChecked) {
+        return CheckedBlock{std::move(block)};
+    }
+
+    if (!CheckBlock(block, state, consensus_params)) {
+        return std::nullopt;
+    }
+
+    return CheckedBlock{std::move(block)};
+}
+
 
