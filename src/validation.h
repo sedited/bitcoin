@@ -17,6 +17,7 @@
 #include <kernel/chain.h>
 #include <kernel/chainparams.h>
 #include <kernel/chainstatemanager_opts.h>
+#include <kernel/check_block.h> // IWYU pragma: export
 #include <kernel/cs_main.h> // IWYU pragma: export
 #include <node/blockstorage.h>
 #include <policy/feerate.h>
@@ -387,9 +388,6 @@ public:
 };
 
 /** Functions for validating blocks and updating the block tree */
-
-/** Context-independent validity checks */
-bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 /**
  * Verify a block, including transactions.

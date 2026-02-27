@@ -12,6 +12,7 @@ add_library(bitcoinkernel
   bitcoinkernel.cpp
   chain.cpp
   checks.cpp
+  check_block.cpp
   chainparams.cpp
   coinstats.cpp
   context.cpp
