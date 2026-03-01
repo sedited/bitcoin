@@ -53,10 +53,6 @@
 using kernel::ChainstateRole;
 using util::ImmediateTaskRunner;
 
-// Define G_TRANSLATION_FUN symbol in libbitcoinkernel library so users of the
-// library aren't required to export this symbol
-extern const TranslateFn G_TRANSLATION_FUN{nullptr};
-
 static const kernel::Context btck_context_static{};
 
 namespace {

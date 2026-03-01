@@ -260,6 +260,8 @@ add_executable(bitcoin-qt
   ../init/bitcoin-qt.cpp
 )
 
+target_compile_definitions(bitcoin-qt PRIVATE ENABLE_TRANSLATIONS)
+
 add_windows_resources(bitcoin-qt res/bitcoin-qt-res.rc)
 add_windows_application_manifest(bitcoin-qt)
 
@@ -286,6 +288,7 @@ if(ENABLE_IPC)
     bitcoin_node
     bitcoin_ipc
   )
+  target_compile_definitions(bitcoin-gui PRIVATE ENABLE_TRANSLATIONS)
   import_plugins(bitcoin-gui)
   install_binary_component(bitcoin-gui INTERNAL)
   if(WIN32)

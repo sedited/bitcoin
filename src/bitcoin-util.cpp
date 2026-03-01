@@ -26,8 +26,6 @@
 
 static const int CONTINUE_EXECUTION=-1;
 
-const TranslateFn G_TRANSLATION_FUN{nullptr};
-
 static void SetupBitcoinUtilArgs(ArgsManager &argsman)
 {
     SetupHelpOptions(argsman);

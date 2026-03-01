@@ -17,8 +17,6 @@
 #include <tinyformat.h>
 #include <vector>
 
-const TranslateFn G_TRANSLATION_FUN{nullptr};
-
 static constexpr auto HELP_USAGE = R"(Usage: %s [OPTIONS] COMMAND...
 
 Options:

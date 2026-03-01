@@ -50,8 +50,6 @@ using util::ToString;
 // just use a plain system_clock.
 using CliClock = std::chrono::system_clock;
 
-const TranslateFn G_TRANSLATION_FUN{nullptr};
-
 static const char DEFAULT_RPCCONNECT[] = "127.0.0.1";
 static const int DEFAULT_HTTP_CLIENT_TIMEOUT=900;
 static constexpr int DEFAULT_WAIT_CLIENT_TIMEOUT = 0;

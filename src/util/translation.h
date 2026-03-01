@@ -14,7 +14,9 @@
 
 /** Translate a message to the native language of the user. */
 using TranslateFn = std::function<std::string(const char*)>;
+#ifdef ENABLE_TRANSLATIONS
 const extern TranslateFn G_TRANSLATION_FUN;
+#endif // ENABLE_TRANSLATIONS
 
 /**
  * Bilingual messages:
@@ -56,7 +58,11 @@ struct TranslatedLiteral {
     const char* const original;
     const TranslateFn* translate_fn;
 
+#ifdef ENABLE_TRANSLATIONS
     consteval TranslatedLiteral(const char* str, const TranslateFn* fn = &G_TRANSLATION_FUN) : original{str}, translate_fn{fn} { assert(original); }
+#else
+    consteval TranslatedLiteral(const char* str, const TranslateFn* fn = nullptr) : original{str}, translate_fn{fn} { assert(original); }
+#endif // ENABLE_TRANSLATIONS
     operator std::string() const { return translate_fn && *translate_fn ? (*translate_fn)(original) : original; }
     operator bilingual_str() const { return {original, std::string{*this}}; }
 };

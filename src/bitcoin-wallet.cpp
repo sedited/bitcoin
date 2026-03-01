@@ -26,8 +26,6 @@
 
 using util::Join;
 
-const TranslateFn G_TRANSLATION_FUN{nullptr};
-
 static void SetupWalletToolArgs(ArgsManager& argsman)
 {
     SetupHelpOptions(argsman);

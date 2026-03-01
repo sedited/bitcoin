@@ -34,8 +34,6 @@
 
 using node::NodeContext;
 
-const TranslateFn G_TRANSLATION_FUN{nullptr};
-
 #if HAVE_DECL_FORK
 
 /** Custom implementation of daemon(). This implements the same order of operations as glibc.
