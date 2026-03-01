@@ -13,10 +13,10 @@
 
 #include <common/args.h>
 #include <kernel/bitcoinkernel_wrapper.h>
+#include <util/fs.h>
 
 #include <cassert>
 #include <charconv>
-#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -208,8 +208,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    std::filesystem::path abs_datadir{std::filesystem::absolute(*args.GetArg("-datadir"))};
-    std::filesystem::create_directories(abs_datadir);
+    fs::path abs_datadir{fs::absolute(fs::PathFromString(*args.GetArg("-datadir")))};
+    fs::create_directories(abs_datadir);
 
     auto chain_type = ParseChainType(args);
     if (!chain_type) {
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
 
     Context context{options};
 
-    ChainstateManagerOptions chainman_opts{context, abs_datadir.string(), (abs_datadir / "blocks").string()};
+    ChainstateManagerOptions chainman_opts{context, fs::PathToString(abs_datadir), fs::PathToString(abs_datadir / "blocks")};
     chainman_opts.SetWorkerThreads(4);
 
     std::unique_ptr<ChainMan> chainman;
