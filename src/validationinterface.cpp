@@ -157,15 +157,17 @@ void ValidationSignals::SyncWithValidationInterfaceQueue()
 // Use a macro instead of a function for conditional logging to prevent
 // evaluating arguments when logging is not enabled.
 //
-// NOTE: The lambda captures all local variables by value.
-#define ENQUEUE_AND_LOG_EVENT(event, fmt, name, ...)           \
-    do {                                                       \
-        auto local_name = (name);                              \
-        LOG_EVENT("Enqueuing " fmt, local_name, __VA_ARGS__);  \
-        m_internals->m_task_runner->insert([=] { \
-            LOG_EVENT(fmt, local_name, __VA_ARGS__);           \
-            event();                                           \
-        });                                                    \
+// NOTE: The lambda captures the event by move and all other variables by value.
+#define ENQUEUE_AND_LOG_EVENT(event, fmt, name, ...)                    \
+    do {                                                                \
+        static_assert(std::is_rvalue_reference_v<decltype((event))>,    \
+                      "event must be passed as an rvalue");             \
+        auto local_name = (name);                                       \
+        LOG_EVENT("Enqueuing " fmt, local_name, __VA_ARGS__);           \
+        m_internals->m_task_runner->insert([=, local_event = (event)] { \
+            LOG_EVENT(fmt, local_name, __VA_ARGS__);                    \
+            local_event();                                              \
+        });                                                             \
     } while (0)
 
 #define LOG_EVENT(fmt, ...) \
@@ -179,7 +181,7 @@ void ValidationSignals::UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlo
     auto event = [pindexNew, pindexFork, fInitialDownload, this] {
         m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.UpdatedBlockTip(pindexNew, pindexFork, fInitialDownload); });
     };
-    ENQUEUE_AND_LOG_EVENT(event, "%s: new block hash=%s fork block hash=%s (in IBD=%s)", __func__,
+    ENQUEUE_AND_LOG_EVENT(std::move(event), "%s: new block hash=%s fork block hash=%s (in IBD=%s)", __func__,
                           pindexNew->GetBlockHash().ToString(),
                           pindexFork ? pindexFork->GetBlockHash().ToString() : "null",
                           fInitialDownload);
@@ -196,7 +198,7 @@ void ValidationSignals::TransactionAddedToMempool(const NewMempoolTransactionInf
     auto event = [tx, mempool_sequence, this] {
         m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.TransactionAddedToMempool(tx, mempool_sequence); });
     };
-    ENQUEUE_AND_LOG_EVENT(event, "%s: txid=%s wtxid=%s", __func__,
+    ENQUEUE_AND_LOG_EVENT(std::move(event), "%s: txid=%s wtxid=%s", __func__,
                           tx.info.m_tx->GetHash().ToString(),
                           tx.info.m_tx->GetWitnessHash().ToString());
 }
@@ -205,7 +207,7 @@ void ValidationSignals::TransactionRemovedFromMempool(const CTransactionRef& tx,
     auto event = [tx, reason, mempool_sequence, this] {
         m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.TransactionRemovedFromMempool(tx, reason, mempool_sequence); });
     };
-    ENQUEUE_AND_LOG_EVENT(event, "%s: txid=%s wtxid=%s reason=%s", __func__,
+    ENQUEUE_AND_LOG_EVENT(std::move(event), "%s: txid=%s wtxid=%s reason=%s", __func__,
                           tx->GetHash().ToString(),
                           tx->GetWitnessHash().ToString(),
                           RemovalReasonToString(reason));
@@ -216,7 +218,7 @@ void ValidationSignals::BlockConnected(const ChainstateRole& role, const std::sh
     auto event = [role, pblock, pindex, this] {
         m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.BlockConnected(role, pblock, pindex); });
     };
-    ENQUEUE_AND_LOG_EVENT(event, "%s: block hash=%s block height=%d", __func__,
+    ENQUEUE_AND_LOG_EVENT(std::move(event), "%s: block hash=%s block height=%d", __func__,
                           pblock->GetHash().ToString(),
                           pindex->nHeight);
 }
@@ -226,7 +228,7 @@ void ValidationSignals::MempoolTransactionsRemovedForBlock(const std::vector<Rem
     auto event = [txs_removed_for_block, nBlockHeight, this] {
         m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.MempoolTransactionsRemovedForBlock(txs_removed_for_block, nBlockHeight); });
     };
-    ENQUEUE_AND_LOG_EVENT(event, "%s: block height=%s txs removed=%s", __func__,
+    ENQUEUE_AND_LOG_EVENT(std::move(event), "%s: block height=%s txs removed=%s", __func__,
                           nBlockHeight,
                           txs_removed_for_block.size());
 }
@@ -236,7 +238,7 @@ void ValidationSignals::BlockDisconnected(const std::shared_ptr<const CBlock>& p
     auto event = [pblock, pindex, this] {
         m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.BlockDisconnected(pblock, pindex); });
     };
-    ENQUEUE_AND_LOG_EVENT(event, "%s: block hash=%s block height=%d", __func__,
+    ENQUEUE_AND_LOG_EVENT(std::move(event), "%s: block hash=%s block height=%d", __func__,
                           pblock->GetHash().ToString(),
                           pindex->nHeight);
 }
@@ -246,7 +248,7 @@ void ValidationSignals::ChainStateFlushed(const ChainstateRole& role, const CBlo
     auto event = [role, locator, this] {
         m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.ChainStateFlushed(role, locator); });
     };
-    ENQUEUE_AND_LOG_EVENT(event, "%s: block hash=%s", __func__,
+    ENQUEUE_AND_LOG_EVENT(std::move(event), "%s: block hash=%s", __func__,
                           locator.IsNull() ? "null" : locator.vHave.front().ToString());
 }
 
