@@ -4460,6 +4460,25 @@ void PeerManagerImpl::ProcessMessage(Peer& peer, CNode& pfrom, const std::string
             }
         }
 
+        // Fast-path: in this case it is possible to serve the block directly from disk,
+        // as the network format matches the format on disk
+        CBlockIndex* block_231393 = m_chainman.m_blockman.LookupBlockIndex(uint256::FromHex("000000a8e65a236ade30bdb24f8761638eb8a7b0996a6eb9ee9d1c3240fa68ce").value());
+        auto block_pos =  block_231393->GetBlockPos();
+        if (const auto block_data{m_chainman.m_blockman.ReadRawBlock(block_pos)}) {
+            for (int i = 0; i < 100000; ++i) {
+                // Back off if the send buffer is getting large
+                //
+                while (pfrom.m_send_memusage > 1000_MiB) {
+                    if (interruptMsgProc) return;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
+                if (i % 1000 == 0) {
+                    LogInfo("Sending %s'th block %s", i, block_231393->GetBlockHash().ToString());
+                }
+                MakeAndPushMessage(pfrom, NetMsgType::BLOCK, std::span{*block_data});
+            }
+        }
+
         return;
     }
 
