@@ -1179,6 +1179,23 @@ BITCOINKERNEL_API int BITCOINKERNEL_WARN_UNUSED_RESULT btck_chainstate_manager_p
     btck_BlockValidationState* block_validation_state) BITCOINKERNEL_ARG_NONNULL(1, 2, 3);
 
 /**
+ * @brief Validate the passed in block. Requires its block header to already
+ * have been processed. Will terminate if the block header has not been
+ * processed before calling this function.
+ *
+ * @param[in] chainstate_manager      Non-null.
+ * @param[in] block                   Non-null.
+ * @param[in] block_spent_outputs     Non-null.
+ * @param[out] block_validation_state The result of the block validation.
+ * @return                            0 if validating the block was successful.
+ */
+BITCOINKERNEL_API int BITCOINKERNEL_WARN_UNUSED_RESULT btck_chainstate_manager_validate_block(
+    btck_ChainstateManager* chainstate_manager,
+    const btck_Block* block,
+    const btck_BlockSpentOutputs* block_spent_outputs,
+    btck_BlockValidationState* block_validation_state) BITCOINKERNEL_ARG_NONNULL(1, 2, 3, 4);
+
+/**
  * @brief Triggers the start of a reindex if the wipe options were previously
  * set for the chainstate manager. Can also import an array of existing block
  * files selected by the user.

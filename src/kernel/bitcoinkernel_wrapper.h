@@ -1317,6 +1317,11 @@ public:
         return btck_chainstate_manager_process_block_header(get(), header.get(), state.get()) == 0;
     }
 
+    bool ValidateBlock(const Block& block, const BlockSpentOutputs& block_spent_outputs, BlockValidationState& state)
+    {
+        return btck_chainstate_manager_validate_block(get(), block.get(), block_spent_outputs.get(), state.get()) == 0;
+    }
+
     ChainView GetChain() const
     {
         return ChainView{btck_chainstate_manager_get_active_chain(get())};

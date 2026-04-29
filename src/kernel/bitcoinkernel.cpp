@@ -42,7 +42,9 @@
 #include <exception>
 #include <functional>
 #include <list>
+#include <map>
 #include <memory>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -275,6 +277,42 @@ struct LoggingConnection {
             m_deleter(m_user_data);
         }
     }
+};
+
+class CoinsViewBlock : public CCoinsViewCache
+{
+private:
+    std::optional<Coin> FetchCoinFromBase(const COutPoint& outpoint) const override
+    {
+        if (auto it = m_coins.find(outpoint); it != m_coins.end()) {
+            return *it->second;
+        }
+        return std::nullopt;
+    }
+
+    std::map<const COutPoint, const Coin*> m_coins;
+    uint256 m_hash_prev_block;
+
+public:
+    CoinsViewBlock(const CBlock& block, const CBlockUndo& block_undo) : CCoinsViewCache(&CoinsViewEmpty::Get()), m_hash_prev_block{block.hashPrevBlock}
+    {
+        size_t i{0};
+        for (const auto& tx : block.vtx) {
+            if (tx->IsCoinBase()) continue;
+            if (i >= block_undo.vtxundo.size()) break;
+            const auto& txundo = block_undo.vtxundo[i];
+            ++i;
+            size_t j{0};
+            for (const CTxIn& txin : tx->vin) {
+                if (j >= txundo.vprevout.size()) break;
+                const Coin& coin = txundo.vprevout[j];
+                ++j;
+                m_coins.try_emplace(txin.prevout, &coin);
+            }
+        }
+    }
+
+    uint256 GetBestBlock() const override { return m_hash_prev_block; }
 };
 
 class KernelNotifications final : public kernel::Notifications
@@ -1375,6 +1413,24 @@ int btck_chainstate_manager_process_block_header(
         LogError("Failed to process block header: %s", e.what());
         return -1;
     }
+}
+
+int btck_chainstate_manager_validate_block(
+    btck_ChainstateManager* chainstate_manager,
+    const btck_Block* block,
+    const btck_BlockSpentOutputs* block_spent_outputs,
+    btck_BlockValidationState* state)
+{
+    auto& chainman = *btck_ChainstateManager::get(chainstate_manager).m_chainman;
+    try {
+        auto coins = CoinsViewBlock{*btck_Block::get(block), *btck_BlockSpentOutputs::get(block_spent_outputs)};
+        btck_BlockValidationState::get(state) = chainman.ValidateBlock(*btck_Block::get(block), coins);
+    } catch (const std::exception& e) {
+        LogError("Failed to validate block: %s", e.what());
+        btck_BlockValidationState::get(state).Error("Exception in ValidateBlock");
+    }
+
+    return btck_BlockValidationState::get(state).IsValid() ? 0 : -1;
 }
 
 const btck_Chain* btck_chainstate_manager_get_active_chain(const btck_ChainstateManager* chainman)

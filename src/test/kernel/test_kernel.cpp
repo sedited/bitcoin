@@ -1209,9 +1209,16 @@ BOOST_AUTO_TEST_CASE(btck_chainman_regtest_tests)
         return std::nullopt;
     };
 
+    std::vector<std::pair<Block, BlockSpentOutputs>> blocks;
+
     for (const auto block_tree_entry : chain.Entries()) {
+        if (block_tree_entry.GetHeight() == 0) continue;
         auto block{chainman->ReadBlock(block_tree_entry)};
+        std::vector<std::vector<Coin>> spent_coins;
         for (const auto transaction : block->Transactions()) {
+            if (transaction.IsCoinbase()) continue;
+
+            std::vector<Coin> tx_spent_coins;
             std::vector<TransactionInput> inputs;
             std::vector<TransactionOutput> spent_outputs;
             for (const auto input : transaction.Inputs()) {
@@ -1225,14 +1232,54 @@ BOOST_AUTO_TEST_CASE(btck_chainman_regtest_tests)
                 BOOST_CHECK(tx.has_value());
                 BOOST_CHECK(point.Txid() == tx->Txid());
                 spent_outputs.emplace_back(tx->GetOutput(point.index()));
+                tx_spent_coins.emplace_back(tx->GetOutput(point.index()), 0, false);
             }
+
             BOOST_CHECK(inputs.size() == spent_outputs.size());
             ScriptVerifyStatus status = ScriptVerifyStatus::OK;
             const PrecomputedTransactionData precomputed_txdata{transaction, spent_outputs};
             for (size_t i{0}; i < inputs.size(); ++i) {
                 BOOST_CHECK(spent_outputs[i].GetScriptPubkey().Verify(spent_outputs[i].Amount(), transaction, &precomputed_txdata, i, ScriptVerificationFlags::ALL, status));
             }
+
+            spent_coins.push_back(std::move(tx_spent_coins));
         }
+        BlockSpentOutputs spent_outputs{spent_coins};
+        BlockSpentOutputs real_spent_outputs{chainman->ReadBlockSpentOutputs(block_tree_entry)};
+
+        BlockValidationState state{};
+
+        BOOST_CHECK(spent_outputs.Count() == real_spent_outputs.Count());
+        for (size_t i{0}; i < real_spent_outputs.Count(); ++i) {
+            BOOST_CHECK_EQUAL(spent_outputs.GetTxSpentOutputs(i).Count(), real_spent_outputs.GetTxSpentOutputs(i).Count());
+        }
+        BOOST_CHECK(chainman->ValidateBlock(*block, spent_outputs, state));
+        BOOST_CHECK_EQUAL(state.GetValidationMode(), ValidationMode::VALID);
+        blocks.emplace_back(*block, spent_outputs);
+    }
+
+    {
+        auto test_directory2{TestDirectory{"regtest_test_bitcoin_kernel_fresh"}};
+        auto notifications2{std::make_shared<TestKernelNotifications>()};
+        auto context2{create_context(notifications2, ChainType::REGTEST)};
+        auto chainman2{create_chainman(
+            test_directory2, /*reindex=*/false, /*wipe_chainstate=*/false,
+            /*block_tree_db_in_memory=*/false, /*chainstate_db_in_memory=*/false, context2)};
+        for (const auto& block : blocks) {
+            BlockValidationState state;
+            BOOST_CHECK(chainman2->ProcessBlockHeader(block.first.GetHeader(), state));
+            BOOST_CHECK_EQUAL(state.GetValidationMode(), ValidationMode::VALID);
+            BOOST_CHECK(chainman2->ValidateBlock(block.first, block.second, state));
+            BOOST_CHECK_EQUAL(state.GetValidationMode(), ValidationMode::VALID);
+            BOOST_CHECK(chainman2->ValidateBlock(block.first, block.second, state));
+            BOOST_CHECK_EQUAL(state.GetValidationMode(), ValidationMode::VALID);
+        }
+
+        BlockValidationState state;
+        // block 205 has transactions
+        BOOST_CHECK(!chainman2->ValidateBlock(blocks[204].first, blocks[205].second, state));
+        BOOST_CHECK_EQUAL(state.GetValidationMode(), ValidationMode::INVALID);
+        BOOST_CHECK_EQUAL(state.GetBlockValidationResult(), BlockValidationResult::CONSENSUS);
     }
 
     // Read spent outputs for current tip and its previous block
