@@ -1237,7 +1237,33 @@ public:
 
 class BlockSpentOutputs : public Handle<btck_BlockSpentOutputs, btck_block_spent_outputs_copy, btck_block_spent_outputs_destroy>
 {
+    struct CallbackContext {
+        const std::vector<std::vector<Coin>>& coins;
+    };
+
+    static const btck_Coin* coin_getter_impl(void* context, size_t tx_index, size_t coin_index)
+    {
+        auto* ctx = static_cast<CallbackContext*>(context);
+        return ctx->coins[tx_index][coin_index].get();
+    }
+
+    static size_t count_getter_impl(void* context, size_t tx_index)
+    {
+        auto* ctx = static_cast<CallbackContext*>(context);
+        return ctx->coins[tx_index].size();
+    }
+
 public:
+    BlockSpentOutputs(const std::vector<std::vector<Coin>>& coins) : Handle{[coins]() {
+        CallbackContext ctx{coins};
+        return btck_block_spent_outputs_create(
+            &ctx,
+            coin_getter_impl,
+            count_getter_impl,
+            coins.size()
+        );
+    }()} {}
+
     BlockSpentOutputs(btck_BlockSpentOutputs* block_spent_outputs)
         : Handle{block_spent_outputs}
     {

@@ -1483,6 +1483,31 @@ BITCOINKERNEL_API btck_BlockSpentOutputs* BITCOINKERNEL_WARN_UNUSED_RESULT btck_
     const btck_BlockTreeEntry* block_tree_entry) BITCOINKERNEL_ARG_NONNULL(1, 2);
 
 /**
+ * Callback type for getting a single coin to construct a block spent
+ * outputs. tx_index index indicates the position of a transaction within a
+ * block, coin_index indicates the position of an input within a block.
+ */
+typedef const btck_Coin* (*btck_coin_getter)(void* context, size_t transaction_index, size_t coin_index);
+
+/**
+ * Callback type for getting the number of inputs (and thus number of coins
+ * consumed) of a transaction
+ */
+typedef size_t (*btck_coins_count)(void* context, size_t transaction_index);
+
+/**
+ * @brief Create a block spent outputs from some coins.
+ *
+ * @param[in] context      Nullable. A user-defined data pointer that is passed through the callbacks.
+ * @param[in] coin_getter  Non-null. A callback for retrieving a coin.
+ * @param[in] count_getter Non-null. A callback for getting the expected number of coins per transaction.
+ * @param[in] num_txs      The number of transactions in the block.
+ */
+BITCOINKERNEL_API btck_BlockSpentOutputs* BITCOINKERNEL_WARN_UNUSED_RESULT
+btck_block_spent_outputs_create(void* context, btck_coin_getter coin_getter,
+        btck_coins_count count_getter, size_t num_txs) BITCOINKERNEL_ARG_NONNULL(2, 3);
+
+/**
  * @brief Copy a block's spent outputs.
  *
  * @param[in] block_spent_outputs Non-null.

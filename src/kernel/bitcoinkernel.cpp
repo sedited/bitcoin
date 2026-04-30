@@ -1261,6 +1261,19 @@ btck_BlockSpentOutputs* btck_block_spent_outputs_read(const btck_ChainstateManag
     return btck_BlockSpentOutputs::create(block_undo);
 }
 
+btck_BlockSpentOutputs* btck_block_spent_outputs_create(void* context, btck_coin_getter coin_getter, btck_coins_count count_getter, size_t num_txs)
+{
+    auto block_undo{std::make_shared<CBlockUndo>()};
+    block_undo->vtxundo.reserve(num_txs);
+    for (uint64_t i{0}; i < num_txs; ++i) {
+        block_undo->vtxundo.emplace_back();
+        for (uint64_t j{0}; j < count_getter(context, i); ++j) {
+            block_undo->vtxundo[i].vprevout.emplace_back(btck_Coin::get(coin_getter(context, i, j)));
+        }
+    }
+    return btck_BlockSpentOutputs::create(block_undo);
+}
+
 btck_BlockSpentOutputs* btck_block_spent_outputs_copy(const btck_BlockSpentOutputs* block_spent_outputs)
 {
     return btck_BlockSpentOutputs::copy(block_spent_outputs);
