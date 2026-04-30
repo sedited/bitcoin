@@ -114,6 +114,9 @@ struct TestDirectory {
 
 class TestKernelNotifications : public KernelNotifications
 {
+private:
+    std::set<Warning> warnings;
+
 public:
     void HeaderTipHandler(SynchronizationState state, int64_t height, int64_t timestamp, bool presync) override
     {
@@ -122,12 +125,18 @@ public:
 
     void WarningSetHandler(Warning warning, std::string_view message) override
     {
-        std::cout << "Kernel warning is set: " << message << std::endl;
+        if (!warnings.contains(warning)) {
+            std::cout << "Kernel warning is set: " << message << std::endl;
+            warnings.insert(warning);
+        }
     }
 
     void WarningUnsetHandler(Warning warning) override
     {
-        std::cout << "Kernel warning was unset." << std::endl;
+        if (warnings.contains(warning)) {
+            std::cout << "Kernel warning was unset." << std::endl;
+            warnings.erase(warning);
+        }
     }
 
     void FlushErrorHandler(std::string_view error) override
