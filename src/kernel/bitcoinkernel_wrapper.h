@@ -1059,6 +1059,9 @@ public:
     ChainParams(ChainType chain_type)
         : Handle{btck_chain_parameters_create(static_cast<btck_ChainType>(chain_type))} {}
 
+    ChainParams(std::span<const std::byte> signet_challenge)
+        : Handle{btck_chain_parameters_create_signet(signet_challenge.data(), signet_challenge.size())} {}
+
     ConsensusParamsView GetConsensusParams() const
     {
         return ConsensusParamsView{btck_chain_parameters_get_consensus_params(get())};
