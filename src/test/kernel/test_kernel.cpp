@@ -122,12 +122,12 @@ public:
 
     void WarningSetHandler(Warning warning, std::string_view message) override
     {
-        std::cout << "Kernel warning is set: " << message << std::endl;
+        BOOST_FAIL("Received unexpected warning");
     }
 
     void WarningUnsetHandler(Warning warning) override
     {
-        std::cout << "Kernel warning was unset." << std::endl;
+        BOOST_CHECK_EQUAL(Warning::LARGE_WORK_INVALID_CHAIN, warning);
     }
 
     void FlushErrorHandler(std::string_view error) override
