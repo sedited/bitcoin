@@ -15,6 +15,7 @@
 #include <kernel/mempool_options.h>        // IWYU pragma: export
 #include <kernel/mempool_removal_reason.h> // IWYU pragma: export
 #include <policy/feerate.h>
+#include <policy/mempool_accept_result.h>
 #include <policy/packages.h>
 #include <primitives/transaction.h>
 #include <primitives/transaction_identifier.h>
@@ -42,7 +43,9 @@
 #include <vector>
 
 class CChain;
+class Chainstate;
 class ValidationSignals;
+class DisconnectedBlockTransactions;
 
 struct bilingual_str;
 
@@ -314,6 +317,24 @@ public:
      * check does nothing.
      */
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);
+
+    /**
+     * Make mempool consistent after a reorg, by re-adding or recursively erasing
+     * disconnected block transactions from the mempool, and also removing any
+     * other transactions from the mempool that are no longer valid given the new
+     * tip/height.
+     *
+     * Note: we assume that disconnectpool only contains transactions that are NOT
+     * confirmed in the current chain nor already in the mempool (otherwise,
+     * in-mempool descendants of such transactions would be removed).
+     *
+     * Passing fAddToMempool=false will skip trying to add the transactions back,
+     * and instead just erase from the mempool as needed.
+     */
+    void MaybeUpdateMempoolForReorg(
+        Chainstate& active_chainstate,
+        DisconnectedBlockTransactions& disconnectpool,
+        bool fAddToMempool) EXCLUSIVE_LOCKS_REQUIRED(cs_main, cs);
 
     /**
      * Remove a transaction from the mempool along with any descendants.
@@ -776,4 +797,40 @@ public:
     /** Clear m_temp_added and m_non_base_coins. */
     void Reset();
 };
+
+/**
+ * Try to add a transaction to the mempool. This is an internal function and is exposed only for testing.
+ * Client code should use ChainstateManager::ProcessTransaction()
+ *
+ * @param[in]  active_chainstate  Reference to the active chainstate.
+ * @param[in]  tx                 The transaction to submit for mempool acceptance.
+ * @param[in]  accept_time        The timestamp for adding the transaction to the mempool.
+ *                                It is also used to determine when the entry expires.
+ * @param[in]  bypass_limits      When true, don't enforce mempool fee and capacity limits,
+ *                                and set entry_sequence to zero.
+ * @param[in]  test_accept        When true, run validation checks but don't submit to mempool.
+ *
+ * @returns a MempoolAcceptResult indicating whether the transaction was accepted/rejected with reason.
+ */
+MempoolAcceptResult AcceptToMemoryPool(Chainstate& active_chainstate, const CTransactionRef& tx,
+                                       int64_t accept_time, bool bypass_limits, bool test_accept)
+    EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+/**
+* Validate (and maybe submit) a package to the mempool. See doc/policy/packages.md for full details
+* on package validation rules.
+* @param[in]    test_accept         When true, run validation checks but don't submit to mempool.
+* @param[in]    client_maxfeerate    If exceeded by an individual transaction, rest of (sub)package evaluation is aborted.
+*                                   Only for sanity checks against local submission of transactions.
+* @returns a PackageMempoolAcceptResult which includes a MempoolAcceptResult for each transaction.
+* If a transaction fails, validation will exit early and some results may be missing. It is also
+* possible for the package to be partially submitted.
+*/
+PackageMempoolAcceptResult ProcessNewPackage(Chainstate& active_chainstate, CTxMemPool& pool,
+                                                   const Package& txns, bool test_accept, const std::optional<CFeeRate>& client_maxfeerate)
+                                                   EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+/* Mempool validation helper functions */
+
+
 #endif // BITCOIN_TXMEMPOOL_H
