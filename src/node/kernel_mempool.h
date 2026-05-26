@@ -7,13 +7,17 @@
 
 #include <kernel/mempool_interface.h>
 
+#include <kernel/disconnected_transactions.h>
+
 #include <cstddef>
 #include <cstdint>
 
 class CBlock;
+class Chainstate;
 class CCoinsViewCache;
 class CTransaction;
 class CTxMemPool;
+class DisconnectedBlockTransactions;
 
 namespace node {
 
@@ -30,6 +34,7 @@ public:
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) override;
     bool empty() override;
     size_t maxSizeBytes() override;
+    void MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) override;
 
 private:
     CTxMemPool& m_mempool;

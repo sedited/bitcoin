@@ -9,8 +9,10 @@
 #include <cstdint>
 
 class CBlock;
+class Chainstate;
 class CCoinsViewCache;
 class CTransaction;
+class DisconnectedBlockTransactions;
 
 namespace kernel {
 
@@ -30,6 +32,7 @@ public:
     virtual void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) {}
     virtual bool empty() { return true; }
     virtual size_t maxSizeBytes() { return 0; }
+    virtual void MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) {}
 };
 
 } // namespace kernel
