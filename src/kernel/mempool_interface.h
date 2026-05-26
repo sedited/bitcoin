@@ -33,6 +33,8 @@ public:
     virtual bool empty() { return true; }
     virtual size_t maxSizeBytes() { return 0; }
     virtual void MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) {}
+    virtual void BeginChainstateUpdate() {}
+    virtual void EndChainstateUpdate() {}
 };
 
 } // namespace kernel

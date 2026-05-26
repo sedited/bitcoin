@@ -35,6 +35,8 @@ public:
     bool empty() override;
     size_t maxSizeBytes() override;
     void MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) override;
+    void BeginChainstateUpdate() override;
+    void EndChainstateUpdate() override;
 
 private:
     CTxMemPool& m_mempool;
