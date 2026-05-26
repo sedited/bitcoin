@@ -31,6 +31,8 @@ public:
     virtual void addTransactionsUpdated(uint32_t n) {}
     virtual void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) {}
     virtual void MaybeUpdateMempoolForReorg(Chainstate& active_chainstate, DisconnectedBlockTransactions& disconnectpool, bool fAddToMempool) {}
+    virtual void BeginChainstateUpdate() {}
+    virtual void EndChainstateUpdate() {}
 };
 
 } // namespace kernel
