@@ -8,7 +8,6 @@
 #include <crc32c/include/crc32c/crc32c.h>
 #include <kernel/cs_main.h>
 #include <logging.h>
-#include <node/blockstorage.h>
 #include <pow.h>
 #include <serialize.h>
 #include <span.h>
