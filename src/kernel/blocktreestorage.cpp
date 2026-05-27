@@ -8,7 +8,6 @@
 #include <crc32c/include/crc32c/crc32c.h>
 #include <kernel/cs_main.h>
 #include <logging.h>
-#include <node/blockstorage.h>
 #include <pow.h>
 #include <serialize.h>
 #include <span.h>
@@ -20,6 +19,7 @@
 #include <util/fs.h>
 #include <util/fs_helpers.h>
 #include <util/signalinterrupt.h>
+#include <util/time.h>
 
 #include <array>
 #include <cstddef>
@@ -57,6 +57,11 @@ struct BlockFileInfoWrapper : CBlockFileInfo {
         READWRITE(obj.nTimeLast);
     }
 };
+
+std::string CBlockFileInfo::ToString() const
+{
+    return strprintf("CBlockFileInfo(blocks=%u, size=%u, heights=%u...%u, time=%s...%s)", nBlocks, nSize, nHeightFirst, nHeightLast, FormatISO8601Date(nTimeFirst), FormatISO8601Date(nTimeLast));
+}
 
 static int64_t CalculateBlockFilesPos(int nFile)
 {
