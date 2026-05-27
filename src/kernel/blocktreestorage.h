@@ -31,7 +31,46 @@ class SignalInterrupt;
 
 namespace kernel {
 
-class CBlockFileInfo;
+class CBlockFileInfo
+{
+public:
+    uint32_t nBlocks{};      //!< number of blocks stored in file
+    uint32_t nSize{};        //!< number of used bytes of block file
+    uint32_t nUndoSize{};    //!< number of used bytes in the undo file
+    uint32_t nHeightFirst{}; //!< lowest height of block in file
+    uint32_t nHeightLast{};  //!< highest height of block in file
+    uint64_t nTimeFirst{};   //!< earliest time of block in file
+    uint64_t nTimeLast{};    //!< latest time of block in file
+
+    SERIALIZE_METHODS(CBlockFileInfo, obj)
+    {
+        READWRITE(VARINT(obj.nBlocks));
+        READWRITE(VARINT(obj.nSize));
+        READWRITE(VARINT(obj.nUndoSize));
+        READWRITE(VARINT(obj.nHeightFirst));
+        READWRITE(VARINT(obj.nHeightLast));
+        READWRITE(VARINT(obj.nTimeFirst));
+        READWRITE(VARINT(obj.nTimeLast));
+    }
+
+    CBlockFileInfo() = default;
+
+    std::string ToString() const;
+
+    /** update statistics (does not update nSize) */
+    void AddBlock(unsigned int nHeightIn, uint64_t nTimeIn)
+    {
+        if (nBlocks == 0 || nHeightFirst > nHeightIn)
+            nHeightFirst = nHeightIn;
+        if (nBlocks == 0 || nTimeFirst > nTimeIn)
+            nTimeFirst = nTimeIn;
+        nBlocks++;
+        if (nHeightIn > nHeightLast)
+            nHeightLast = nHeightIn;
+        if (nTimeIn > nTimeLast)
+            nTimeLast = nTimeIn;
+    }
+};
 
 //! The data layout of the headers file is as follows:
 //! <magic> <version> [<DiskBlockIndexWrapper> <checksum>]
