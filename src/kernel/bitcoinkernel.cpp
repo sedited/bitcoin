@@ -1033,6 +1033,19 @@ void btck_chainstate_manager_options_update_chainstate_db_in_memory(
     opts.m_chainstate_load_options.coins_db_in_memory = chainstate_db_in_memory == 1;
 }
 
+void btck_chainstate_manager_options_set_assumevalid_block(
+    btck_ChainstateManagerOptions* chainman_opts,
+    const btck_BlockHash* assumed_valid_block_hash) BITCOINKERNEL_ARG_NONNULL(1, 2)
+{
+    auto& opts{btck_ChainstateManagerOptions::get(chainman_opts)};
+    LOCK(opts.m_mutex);
+    if (assumed_valid_block_hash == nullptr) {
+        opts.m_chainman_options.assumed_valid_block = std::nullopt;
+    } else {
+        opts.m_chainman_options.assumed_valid_block = btck_BlockHash::get(assumed_valid_block_hash);
+    }
+}
+
 btck_ChainstateManager* btck_chainstate_manager_create(
     const btck_ChainstateManagerOptions* chainman_opts)
 {

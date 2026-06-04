@@ -1225,6 +1225,19 @@ BITCOINKERNEL_API void btck_chainstate_manager_options_update_chainstate_db_in_m
     int chainstate_db_in_memory) BITCOINKERNEL_ARG_NONNULL(1);
 
 /**
+ * @brief Sets the assumevalid hash in the options. Assumevalid skips
+ * verification of a block's transaction's scripts up to a target block. If
+ * this option is not set, the default Bitcoin Core assumed valid block is
+ * used. If the block hash is null, assumevalid is disabled.
+ *
+ * @param[in] chainstate_manager_options Non-null, created by @ref btck_chainstate_maanger_options_create.
+ * @param[in] block_hash                 Nullable, the block hash of the block marking the assume valid point.
+ */
+BITCOINKERNEL_API void btck_chainstate_manager_options_set_assumevalid_block(
+    btck_ChainstateManagerOptions* chainstate_manager_options,
+    const btck_BlockHash* assumed_valid_block_hash) BITCOINKERNEL_ARG_NONNULL(1);
+
+/**
  * Destroy the chainstate manager options.
  */
 BITCOINKERNEL_API void btck_chainstate_manager_options_destroy(btck_ChainstateManagerOptions* chainstate_manager_options);

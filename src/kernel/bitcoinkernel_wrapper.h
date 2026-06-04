@@ -1161,6 +1161,11 @@ public:
     {
         btck_chainstate_manager_options_update_chainstate_db_in_memory(get(), chainstate_db_in_memory);
     }
+
+    void SetAssumeValid(const std::optional<BlockHash> block_hash)
+    {
+        btck_chainstate_manager_options_set_assumevalid_block(get(), block_hash ? block_hash->get() : nullptr);
+    }
 };
 
 class ChainView : public View<btck_Chain>
