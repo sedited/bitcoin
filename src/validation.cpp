@@ -1083,7 +1083,9 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 CoinsCacheSizeState Chainstate::GetCoinsCacheSizeState()
 {
     AssertLockHeld(::cs_main);
-    return this->GetCoinsCacheSizeState(m_coinstip_cache_size_bytes, 0);
+    return this->GetCoinsCacheSizeState(
+        m_coinstip_cache_size_bytes,
+        !GetRole().historical ? m_chainman.GetMempool().maxSizeBytes() : 0);
 }
 
 CoinsCacheSizeState Chainstate::GetCoinsCacheSizeState(

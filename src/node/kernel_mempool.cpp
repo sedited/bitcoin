@@ -26,6 +26,11 @@ void KernelMempool::removeForBlock(const CBlock& block, unsigned int block_heigh
     m_mempool.removeForBlock(block.vtx, block_height);
 }
 
+size_t KernelMempool::maxSizeBytes()
+{
+    return static_cast<size_t>(m_mempool.m_opts.max_size_bytes);
+}
+
 size_t KernelMempool::measureExternalDynamicMemoryUsage()
 {
     return m_mempool.DynamicMemoryUsage();

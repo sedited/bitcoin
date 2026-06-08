@@ -27,6 +27,7 @@ public:
 
     virtual void removeRecursive(const CTransaction& tx) {}
     virtual void removeForBlock(const CBlock& block, unsigned int block_height) {}
+    virtual size_t maxSizeBytes() { return 0; }
     virtual size_t measureExternalDynamicMemoryUsage() { return 0; }
     virtual void addTransactionsUpdated(uint32_t n) {}
     virtual void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) {}
