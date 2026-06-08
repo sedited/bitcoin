@@ -171,6 +171,19 @@ class AssumeutxoTest(BitcoinTestFramework):
             msg = "Unable to load UTXO snapshot: The base block header (0c552ced4721c249a389eb9b08cb8da261cd46f0e7b5f9d064d48f3113406853) must appear in the headers chain. Make sure all headers are syncing, and call loadtxoutset again."
             assert_raises_rpc_error(-32603, msg, node.loadtxoutset, valid_snapshot_path)
 
+    def test_snapshot_with_non_empty_mempool(self, dump_output_path):
+        self.log.info("Test snapshot is not loaded when the mempool is non-empty")
+        node = self.nodes[3]
+        wallet = MiniWallet(node)
+        wallet.send_self_transfer(from_node=node)
+        assert_equal(len(node.getrawmempool()), 1)
+
+        msg = "Unable to load UTXO snapshot: Can't activate a snapshot when mempool not empty"
+        assert_raises_rpc_error(-32603, msg, node.loadtxoutset, dump_output_path)
+
+        self.restart_node(3, extra_args=[*self.extra_args[3], "-persistmempool=0"])
+        assert_equal(node.getrawmempool(), [])
+
     def test_invalid_chainstate_scenarios(self):
         self.log.info("Test different scenarios of invalid snapshot chainstate in datadir")
 
@@ -503,6 +516,7 @@ class AssumeutxoTest(BitcoinTestFramework):
         self.test_invalid_file_path()
         self.test_snapshot_block_invalidated(dump_output['path'])
         self.test_snapshot_not_on_most_work_chain(dump_output['path'])
+        self.test_snapshot_with_non_empty_mempool(dump_output['path'])
 
         # Prune-node sanity check
         assert 'NETWORK' not in n1.getnetworkinfo()['localservicesnames']
