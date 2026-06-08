@@ -42,4 +42,9 @@ void KernelMempool::check(const CCoinsViewCache& active_coins_tip, int64_t spend
     m_mempool.check(active_coins_tip, spendheight);
 }
 
+bool KernelMempool::empty()
+{
+    return m_mempool.size() == 0;
+}
+
 } // namespace node

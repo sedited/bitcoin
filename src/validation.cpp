@@ -5617,8 +5617,7 @@ util::Result<CBlockIndex*> ChainstateManager::ActivateSnapshot(
             return util::Error{Untranslated("A forked headers-chain with more work than the chain with the snapshot base block header exists. Please proceed to sync without AssumeUtxo.")};
         }
 
-        auto mempool{CurrentChainstate().GetMempool()};
-        if (mempool && mempool->size() > 0) {
+        if (!GetMempool().empty()) {
             return util::Error{Untranslated("Can't activate a snapshot when mempool not empty")};
         }
     }
