@@ -65,4 +65,25 @@ BOOST_AUTO_TEST_CASE(getcoinscachesizestate)
     BOOST_CHECK_EQUAL(chainstate.GetCoinsCacheSizeState(MAX_COINS_BYTES, /*max_mempool_size_bytes=*/0), CoinsCacheSizeState::OK);
 }
 
+BOOST_AUTO_TEST_CASE(getcoinscachesizestate_uses_default_mempool_headroom)
+{
+    Chainstate& chainstate{m_node.chainman->ActiveChainstate()};
+
+    LOCK(::cs_main);
+
+    constexpr size_t MAX_COINS_BYTES{8_MiB};
+    constexpr size_t MAX_ATTEMPTS{50'000};
+
+    BOOST_REQUIRE(chainstate.ResizeCoinsCaches(MAX_COINS_BYTES, /*coinsdb_size=*/1_MiB));
+    CCoinsViewCache& view{chainstate.CoinsTip()};
+
+    for (size_t i{0}; i < MAX_ATTEMPTS && view.DynamicMemoryUsage() <= MAX_COINS_BYTES; ++i) {
+        AddTestCoin(m_rng, view);
+    }
+
+    BOOST_REQUIRE_GT(view.DynamicMemoryUsage(), MAX_COINS_BYTES);
+    BOOST_CHECK_EQUAL(chainstate.GetCoinsCacheSizeState(MAX_COINS_BYTES, /*max_mempool_size_bytes=*/0), CoinsCacheSizeState::CRITICAL);
+    BOOST_CHECK_NE(chainstate.GetCoinsCacheSizeState(), CoinsCacheSizeState::CRITICAL);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
