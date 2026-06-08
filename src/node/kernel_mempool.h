@@ -29,6 +29,7 @@ public:
 
     void removeRecursive(const CTransaction& tx) override;
     void removeForBlock(const CBlock& block, unsigned int nBlockHeight) override;
+    bool empty() override;
     size_t measureExternalDynamicMemoryUsage() override;
     void addTransactionsUpdated(uint32_t n) override;
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) override;

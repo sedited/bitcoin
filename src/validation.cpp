@@ -4023,6 +4023,10 @@ util::Result<CBlockIndex*> ChainstateManager::ActivateSnapshot(
         if (!m_best_header || m_best_header->GetAncestor(snapshot_start_block->nHeight) != snapshot_start_block) {
             return util::Error{Untranslated("A forked headers-chain with more work than the chain with the snapshot base block header exists. Please proceed to sync without AssumeUtxo.")};
         }
+
+        if (!GetMempool().empty()) {
+            return util::Error{Untranslated("Can't activate a snapshot when mempool not empty")};
+        }
     }
 
     int64_t current_coinsdb_cache_size{0};

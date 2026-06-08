@@ -26,6 +26,11 @@ void KernelMempool::removeForBlock(const CBlock& block, unsigned int block_heigh
     m_mempool.removeForBlock(block.vtx, block_height);
 }
 
+bool KernelMempool::empty()
+{
+    return m_mempool.size() == 0;
+}
+
 size_t KernelMempool::measureExternalDynamicMemoryUsage()
 {
     return m_mempool.DynamicMemoryUsage();
