@@ -29,6 +29,7 @@ public:
     void addTransactionsUpdated(uint32_t n) override;
     void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) override;
     bool empty() override;
+    size_t maxSizeBytes() override;
 
 private:
     CTxMemPool& m_mempool;

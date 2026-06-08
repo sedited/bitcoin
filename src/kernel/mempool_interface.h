@@ -29,6 +29,7 @@ public:
     virtual void addTransactionsUpdated(uint32_t n) {}
     virtual void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) {}
     virtual bool empty() { return true; }
+    virtual size_t maxSizeBytes() { return 0; }
 };
 
 } // namespace kernel

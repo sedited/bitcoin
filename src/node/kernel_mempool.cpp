@@ -47,4 +47,9 @@ bool KernelMempool::empty()
     return m_mempool.size() == 0;
 }
 
+size_t KernelMempool::maxSizeBytes()
+{
+    return static_cast<size_t>(m_mempool.m_opts.max_size_bytes);
+}
+
 } // namespace node
