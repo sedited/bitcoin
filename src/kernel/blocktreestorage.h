@@ -83,6 +83,13 @@ public:
 
 class BlockTreeStore
 {
+public:
+    enum class OpenMode {
+        WRITE,
+        WIPE,
+        READ
+    };
+
 private:
     fs::path m_header_file_path;
     fs::path m_log_file_path;
@@ -96,6 +103,9 @@ private:
     bool m_incomplete_log_apply{false};
 
     mutable Mutex m_mutex;
+    OpenMode m_mode;
+
+    void CheckWriteAccess() const;
 
     void WriteFlag(const fs::path& path, bool value, bool directory_commit) const;
 
@@ -109,10 +119,6 @@ private:
     [[nodiscard]] bool ApplyLog() const EXCLUSIVE_LOCKS_REQUIRED(m_mutex);
 
 public:
-    enum class OpenMode {
-        WRITE,
-        WIPE
-    };
     BlockTreeStore(const fs::path& path, OpenMode open_mode = OpenMode::WRITE);
     ~BlockTreeStore();
 
