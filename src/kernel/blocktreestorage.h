@@ -97,6 +97,35 @@ public:
 
 class BlockTreeStore
 {
+public:
+    enum class OpenMode {
+        WRITE,
+        WIPE,
+        READ
+    };
+
+    //! Interthread mutex combined with a cross-process file lock. Not re-entrant.
+    class LOCKABLE Mutex
+    {
+        //! Mutex for synchronization across threads.
+        ::Mutex m_mutex;
+        //! File lock for synchronization across processes.
+        const fs::path m_dir;
+
+    public:
+        explicit Mutex(const fs::path& dir) : m_dir{dir} {}
+
+        void lock() EXCLUSIVE_LOCK_FUNCTION();
+        void unlock() UNLOCK_FUNCTION();
+        bool try_lock() EXCLUSIVE_TRYLOCK_FUNCTION(true);
+
+        using unique_lock = std::unique_lock<Mutex>;
+
+#ifdef __clang__
+        const Mutex& operator!() const { return *this; }
+#endif
+    };
+
 private:
     fs::path m_header_file_path;
     fs::path m_log_file_path;
@@ -110,7 +139,10 @@ private:
     bool m_incomplete_log_apply{false};
 
     std::optional<WriterLock> m_writer_lock;
-    mutable Mutex m_mutex;
+    mutable Mutex m_store_mutex;
+    OpenMode m_mode;
+
+    void CheckWriteAccess() const;
 
     void WriteFlag(const fs::path& path, bool value, bool directory_commit) const;
 
@@ -121,20 +153,16 @@ private:
      * nothing to apply, either by no log file existing, or it not being
      * complete.
      */
-    [[nodiscard]] bool ApplyLog() const EXCLUSIVE_LOCKS_REQUIRED(m_mutex);
+    [[nodiscard]] bool ApplyLog() const EXCLUSIVE_LOCKS_REQUIRED(m_store_mutex);
 
 public:
-    enum class OpenMode {
-        WRITE,
-        WIPE
-    };
     BlockTreeStore(const fs::path& path, OpenMode open_mode = OpenMode::WRITE);
 
     void ReadReindexing(bool& reindexing) const;
     void WriteReindexing(bool reindexing) const;
 
     //! Block files are zero indexed. Returns 0 when there are no block files indexed yet.
-    void ReadLastBlockFile(int32_t& last_block_file) const EXCLUSIVE_LOCKS_REQUIRED(!m_mutex);
+    void ReadLastBlockFile(int32_t& last_block_file) const EXCLUSIVE_LOCKS_REQUIRED(!m_store_mutex);
 
     void ReadPruned(bool& pruned) const;
     void WritePruned(bool pruned) const;
@@ -146,15 +174,15 @@ public:
     void SetSimulateIncompleteLogApply(bool val) { m_incomplete_log_apply = val; }
 
     void WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*>>& file_infos_to_write, const std::vector<CBlockIndex*>& block_indexes_to_write)
-        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_mutex);
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_store_mutex);
 
-    [[nodiscard]] bool ReadBlockFileInfo(int file_index, CBlockFileInfo& info) EXCLUSIVE_LOCKS_REQUIRED(!m_mutex);
+    [[nodiscard]] bool ReadBlockFileInfo(int file_index, CBlockFileInfo& info) EXCLUSIVE_LOCKS_REQUIRED(!m_store_mutex);
 
     [[nodiscard]] bool LoadBlockIndexGuts(
         const Consensus::Params& consensus_params,
         std::function<CBlockIndex*(const uint256&)> insert_block_index,
         const util::SignalInterrupt& interrupt)
-        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_mutex);
+        EXCLUSIVE_LOCKS_REQUIRED(::cs_main, !m_store_mutex);
 };
 
 } // namespace kernel
