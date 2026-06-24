@@ -416,6 +416,19 @@ if(BUILD_KERNEL_LIB)
     )
     install_binary_component(bitcoin-chainstate INTERNAL)
   endif()
+
+  add_executable(bitcoin-writer
+    bitcoin-writer.cpp
+  )
+  target_link_libraries(bitcoin-writer
+    bitcoin_util
+    bitcoin_node)
+  add_executable(bitcoin-reader
+    bitcoin-reader.cpp
+  )
+  target_link_libraries(bitcoin-reader
+    bitcoin_util
+    bitcoin_node)
 endif()
 
 
