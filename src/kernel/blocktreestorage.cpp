@@ -20,6 +20,7 @@
 #include <util/fs.h>
 #include <util/fs_helpers.h>
 #include <util/signalinterrupt.h>
+#include <util/time.h>
 
 #include <array>
 #include <cstddef>
@@ -34,6 +35,35 @@ namespace kernel {
 
 using Checksum = uint32_t;
 using FilePosition = int64_t;
+
+static constexpr const char* STORE_LOCK_NAME{".lock"};
+
+class StoreLock
+{
+    const fs::path m_dir;
+
+public:
+    explicit StoreLock(const fs::path& dir) : m_dir{dir}
+    {
+        for (;;) {
+            switch (util::LockDirectory(m_dir, m_dir / STORE_LOCK_NAME)) {
+            case util::LockResult::Success:
+                return;
+            case util::LockResult::ErrorWrite:
+                throw BlockTreeStoreError(strprintf(
+                    "Cannot create write-lock file in %s", fs::PathToString(m_dir)));
+            case util::LockResult::ErrorLock:
+                // Read and write access is typically short, so wait a bit and try again.
+                UninterruptibleSleep(std::chrono::milliseconds(1));
+            }
+        }
+    }
+
+    ~StoreLock() { UnlockDirectory(m_dir, m_dir / STORE_LOCK_NAME); }
+
+    StoreLock(const StoreLock&) = delete;
+    StoreLock& operator=(const StoreLock&) = delete;
+};
 
 /** A wrapper for creating a constant-sized serialization without varint encoding */
 struct BlockFileInfoWrapper : CBlockFileInfo {
@@ -144,13 +174,14 @@ BlockTreeStore::BlockTreeStore(const fs::path& path, const OpenMode open_mode)
       m_log_flag_file_path{path / LOG_FLAG_FILE_NAME},
       m_block_files_file_path{path / BLOCK_FILES_FILE_NAME},
       m_reindex_flag_file_path{path / REINDEX_FLAG_FILE_NAME},
-      m_prune_flag_file_path{path / PRUNE_FLAG_FILE_NAME}
+      m_prune_flag_file_path{path / PRUNE_FLAG_FILE_NAME},
+      m_mode{open_mode}
 {
     assert(GetSerializeSize(DiskBlockIndexWrapper{}) == DiskBlockIndexWrapper::SERIALIZED_SIZE);
     assert(GetSerializeSize(BlockFileInfoWrapper{}) == BlockFileInfoWrapper::SERIALIZED_SIZE);
     LOCK(m_mutex);
     fs::create_directories(path);
-    if (open_mode == OpenMode::WIPE) {
+    if (m_mode == OpenMode::WIPE) {
         fs::remove(m_header_file_path);
         fs::remove(m_block_files_file_path);
         fs::remove(m_log_file_path);
@@ -205,6 +236,7 @@ void BlockTreeStore::WriteReindexing(bool reindexing) const
 void BlockTreeStore::ReadLastBlockFile(int32_t& last_block_file) const
 {
     LOCK(m_mutex);
+    StoreLock lock_file{m_log_file_path.parent_path()};
     auto file{OpenFileAndVerifyHeader(m_block_files_file_path, BLOCK_FILES_FILE_MAGIC, BLOCK_FILES_FILE_VERSION)};
 
     constexpr uint64_t entry_size = BlockFileInfoWrapper::SERIALIZED_SIZE + sizeof(Checksum);
@@ -301,6 +333,7 @@ static void ReadDataValue(AutoFile& file, std::span<std::byte> value_buffer)
 bool BlockTreeStore::ReadBlockFileInfo(int file_index, CBlockFileInfo& info)
 {
     LOCK(m_mutex);
+    StoreLock lock_file{m_log_file_path.parent_path()};
 
     auto file{OpenFileAndVerifyHeader(m_block_files_file_path, BLOCK_FILES_FILE_MAGIC, BLOCK_FILES_FILE_VERSION)};
     file.seek(CalculateBlockFileInfoPosition(file_index), SEEK_SET);
@@ -321,7 +354,10 @@ bool BlockTreeStore::ReadBlockFileInfo(int file_index, CBlockFileInfo& info)
 
 bool BlockTreeStore::ApplyLog() const
 {
+    if (m_mode == OpenMode::READ) return false;
+
     AssertLockHeld(m_mutex);
+    StoreLock lock_file{m_log_file_path.parent_path()};
 
     if (!fs::exists(m_log_file_path) || !fs::exists(m_log_flag_file_path)) {
         return false;
@@ -405,6 +441,8 @@ void BlockTreeStore::WriteBatchSync(const std::vector<std::pair<int, const CBloc
     AssertLockHeld(::cs_main);
     LOCK(m_mutex);
 
+    // If there is a complete log waiting to be applied, write that first. An incomplete log is discarded.
+    // This may occur if a previous write threw an exception when writing the logged data to the .dat files.
     if (ApplyLog()) {
         LogInfo("Applied block tree store write-ahead log left over from a previous failure, potentially caused by unclean shutdown or intermittent hardware issue.");
     }
@@ -490,6 +528,7 @@ bool BlockTreeStore::LoadBlockIndexGuts(
 {
     AssertLockHeld(::cs_main);
     LOCK(m_mutex);
+    StoreLock lock_file{m_log_file_path.parent_path()};
 
     auto file{OpenFileAndVerifyHeader(m_header_file_path, HEADER_FILE_MAGIC, HEADER_FILE_VERSION)};
 
