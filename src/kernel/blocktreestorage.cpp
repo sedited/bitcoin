@@ -20,6 +20,7 @@
 #include <util/fs.h>
 #include <util/fs_helpers.h>
 #include <util/signalinterrupt.h>
+#include <util/time.h>
 
 #include <array>
 #include <cstddef>
@@ -35,6 +36,7 @@ namespace kernel {
 using Checksum = uint32_t;
 using FilePosition = int64_t;
 
+static constexpr const char* STORE_ACCESS_LOCK_NAME{".lock"};
 static constexpr const char* WRITER_LOCK_NAME{".writer-lock"};
 
 /** A wrapper for creating a constant-sized serialization without varint encoding */
@@ -58,6 +60,47 @@ struct BlockFileInfoWrapper : CBlockFileInfo {
         READWRITE(obj.nTimeLast);
     }
 };
+
+void BlockTreeStore::Mutex::lock()
+{
+    m_mutex.lock();
+    std::chrono::milliseconds timeout{30s};
+    SteadyClock::time_point start{SteadyClock::now()};
+    for (;;) {
+        switch (util::LockDirectory(m_dir, STORE_ACCESS_LOCK_NAME)) {
+        case util::LockResult::Success:
+            return;
+        case util::LockResult::ErrorWrite:
+            m_mutex.unlock();
+            throw BlockTreeStoreError(strprintf(
+                "Cannot create write-lock file in %s", fs::PathToString(m_dir)));
+        case util::LockResult::ErrorLock: {
+            if (SteadyClock::now() > start + timeout) {
+                m_mutex.unlock();
+                throw BlockTreeStoreError(strprintf("Operation timed out waiting to acquire lock on %s", fs::PathToString(m_dir)));
+            }
+            // Read and write access is typically short, so wait a bit and try again.
+            UninterruptibleSleep(1ms);
+        }
+        }
+    }
+}
+
+void BlockTreeStore::Mutex::unlock()
+{
+    UnlockDirectory(m_dir, STORE_ACCESS_LOCK_NAME);
+    m_mutex.unlock();
+}
+
+bool BlockTreeStore::Mutex::try_lock()
+{
+    if (!m_mutex.try_lock()) return false;
+    if (util::LockDirectory(m_dir, STORE_ACCESS_LOCK_NAME) != util::LockResult::Success) {
+        m_mutex.unlock();
+        return false;
+    }
+    return true;
+}
 
 WriterLock::WriterLock(const fs::path& dir) : m_dir{dir}
 {
@@ -163,16 +206,20 @@ BlockTreeStore::BlockTreeStore(const fs::path& path, const OpenMode open_mode)
       m_log_flag_file_path{path / LOG_FLAG_FILE_NAME},
       m_block_files_file_path{path / BLOCK_FILES_FILE_NAME},
       m_reindex_flag_file_path{path / REINDEX_FLAG_FILE_NAME},
-      m_prune_flag_file_path{path / PRUNE_FLAG_FILE_NAME}
+      m_prune_flag_file_path{path / PRUNE_FLAG_FILE_NAME},
+      m_store_mutex{path},
+      m_mode{open_mode}
 {
     assert(GetSerializeSize(DiskBlockIndexWrapper{}) == DiskBlockIndexWrapper::SERIALIZED_SIZE);
     assert(GetSerializeSize(BlockFileInfoWrapper{}) == BlockFileInfoWrapper::SERIALIZED_SIZE);
 
-    LOCK(m_mutex);
+    if (m_mode == OpenMode::READ) return;
+
     fs::create_directories(path);
     m_writer_lock.emplace(path);
+    LOCK(m_store_mutex);
 
-    if (open_mode == OpenMode::WIPE) {
+    if (m_mode == OpenMode::WIPE) {
         fs::remove(m_header_file_path);
         fs::remove(m_block_files_file_path);
         fs::remove(m_log_file_path);
@@ -194,6 +241,11 @@ BlockTreeStore::BlockTreeStore(const fs::path& path, const OpenMode open_mode)
     if (ApplyLog()) {
         LogInfo("Applied block tree store write-ahead log left over from a previous failure, potentially caused by unclean shutdown or intermittent hardware issue.");
     }
+}
+
+void BlockTreeStore::CheckWriteAccess() const
+{
+    if (m_mode == OpenMode::READ) throw std::logic_error("Block tree store writes are disabled when opened in read mode");
 }
 
 void BlockTreeStore::WriteFlag(const fs::path& path, bool value, bool directory_commit) const
@@ -221,12 +273,13 @@ void BlockTreeStore::ReadReindexing(bool& reindexing) const
 
 void BlockTreeStore::WriteReindexing(bool reindexing) const
 {
+    CheckWriteAccess();
     WriteFlag(m_reindex_flag_file_path, /*value=*/reindexing, /*directory_commit=*/true);
 }
 
 void BlockTreeStore::ReadLastBlockFile(int32_t& last_block_file) const
 {
-    LOCK(m_mutex);
+    LOCK(m_store_mutex);
     auto file{OpenFileAndVerifyHeader(m_block_files_file_path, BLOCK_FILES_FILE_MAGIC, BLOCK_FILES_FILE_VERSION)};
 
     constexpr uint64_t entry_size = BlockFileInfoWrapper::SERIALIZED_SIZE + sizeof(Checksum);
@@ -244,6 +297,7 @@ void BlockTreeStore::ReadPruned(bool& pruned) const
 
 void BlockTreeStore::WritePruned(bool pruned) const
 {
+    CheckWriteAccess();
     WriteFlag(m_prune_flag_file_path, /*value=*/pruned, /*directory_commit=*/true);
 }
 
@@ -322,7 +376,7 @@ static void ReadDataValue(AutoFile& file, std::span<std::byte> value_buffer)
 
 bool BlockTreeStore::ReadBlockFileInfo(int file_index, CBlockFileInfo& info)
 {
-    LOCK(m_mutex);
+    LOCK(m_store_mutex);
 
     auto file{OpenFileAndVerifyHeader(m_block_files_file_path, BLOCK_FILES_FILE_MAGIC, BLOCK_FILES_FILE_VERSION)};
     file.seek(CalculateBlockFileInfoPosition(file_index), SEEK_SET);
@@ -343,7 +397,7 @@ bool BlockTreeStore::ReadBlockFileInfo(int file_index, CBlockFileInfo& info)
 
 bool BlockTreeStore::ApplyLog() const
 {
-    AssertLockHeld(m_mutex);
+    AssertLockHeld(m_store_mutex);
 
     if (!fs::exists(m_log_file_path) || !fs::exists(m_log_flag_file_path)) {
         return false;
@@ -425,8 +479,9 @@ bool BlockTreeStore::ApplyLog() const
 
 void BlockTreeStore::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*>>& file_infos_to_write, const std::vector<CBlockIndex*>& block_indexes_to_write)
 {
+    CheckWriteAccess();
     AssertLockHeld(::cs_main);
-    LOCK(m_mutex);
+    LOCK(m_store_mutex);
 
     // If there is a complete log waiting to be applied, write that first. An incomplete log is discarded.
     // This may occur if a previous write threw an exception when writing the logged data to the .dat files.
@@ -514,7 +569,7 @@ bool BlockTreeStore::LoadBlockIndexGuts(
     const util::SignalInterrupt& interrupt)
 {
     AssertLockHeld(::cs_main);
-    LOCK(m_mutex);
+    LOCK(m_store_mutex);
 
     auto file{OpenFileAndVerifyHeader(m_header_file_path, HEADER_FILE_MAGIC, HEADER_FILE_VERSION)};
 
