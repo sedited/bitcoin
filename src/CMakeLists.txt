@@ -404,6 +404,14 @@ if(BUILD_KERNEL_LIB)
     add_subdirectory(test/kernel)
   endif()
   if(BUILD_UTIL_CHAINSTATE)
+    add_executable(script-debugger
+      script_debugger.cpp
+    )
+    target_link_libraries(script-debugger
+      PRIVATE
+        core_interface
+        bitcoinkernel
+    )
     add_executable(bitcoin-chainstate
       bitcoin-chainstate.cpp
     )
