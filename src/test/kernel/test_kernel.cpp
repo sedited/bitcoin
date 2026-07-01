@@ -625,6 +625,74 @@ BOOST_AUTO_TEST_CASE(btck_script_verify_tests)
         /*taproot=*/true);
 }
 
+// #ifdef ENABLE_SCRIPT_TRACE
+class TestScriptTracer
+{
+public:
+    std::vector<ScriptTraceState> m_events;
+
+    void ScriptTrace(ScriptTraceState state)
+    {
+        m_events.push_back(std::move(state));
+    }
+};
+
+BOOST_AUTO_TEST_CASE(btck_script_trace_tests)
+{
+    // The tracer records a deep copy of every trace event. We keep a raw
+    // observer pointer because ScriptTraceSetCallback takes ownership via
+    // unique_ptr/release; the library frees the tracer on unset, so all
+    // inspection must happen BEFORE ScriptTraceUnsetCallback().
+    auto tracer{std::make_unique<TestScriptTracer>()};
+    TestScriptTracer* observer{tracer.get()};
+
+    try {
+        ScriptTraceSetCallback(std::move(tracer));
+    } catch (const std::runtime_error&) {
+        // Built without ENABLE_SCRIPT_TRACE: registration throws. Skip.
+        BOOST_TEST_MESSAGE("Script tracing not compiled in (ENABLE_SCRIPT_TRACE off); skipping.");
+        return;
+    }
+
+    // Reuse the legacy P2PKH transaction from btck_script_verify_tests. Running
+    // Verify drives the interpreter, which invokes the trace callback.
+    auto spent_script_pubkey{ScriptPubkey{hex_string_to_byte_vec("76a9144bfbaf6afb76cc5771bc6404810d1cc041a6933988ac")}};
+    auto spending_tx{Transaction{hex_string_to_byte_vec("02000000013f7cebd65c27431a90bba7f796914fe8cc2ddfc3f2cbd6f7e5f2fc854534da95000000006b483045022100de1ac3bcdfb0332207c4a91f3832bd2c2915840165f876ab47c5f8996b971c3602201c6c053d750fadde599e6f5c4e1963df0f01fc0d97815e8157e3d59fe09ca30d012103699b464d1d8bc9e47d4fb1cdaa89a1c5783d68363c4dbc4b524ed3d857148617feffffff02836d3c01000000001976a914fc25d6d5c94003bf5b0c7b640a248e2c637fcfb088ac7ada8202000000001976a914fbed3d9b11183209a57999d54d59f67c019e756c88ac6acb0700")}};
+
+    auto status{ScriptVerifyStatus::OK};
+    BOOST_CHECK(spent_script_pubkey.Verify(
+        /*amount=*/0,
+        spending_tx,
+        /*precomputed_txdata=*/nullptr,
+        /*input_index=*/0,
+        VERIFY_ALL_PRE_SEGWIT,
+        status));
+    BOOST_CHECK(status == ScriptVerifyStatus::OK);
+
+    // The callback fired during verification.
+    BOOST_CHECK(!observer->m_events.empty());
+
+    // Every event is a self-consistent deep copy: the interpreter always has a
+    // script under execution, and each recorded stack item's bytes are owned
+    // (accessing them here, after the callback returned, must be valid).
+    for (const auto& event : observer->m_events) {
+        BOOST_CHECK(!event.m_script.empty());
+        for (const auto& item : event.m_stack) {
+            volatile size_t touch = item.size(); // force a read of the owned copy
+            (void)touch;
+        }
+    }
+
+    // The final event is the guard's terminating snapshot on the success path.
+    // For a passing P2PKH spend the top stack element is true (non-empty, non-zero).
+    const auto& last{observer->m_events.back()};
+    BOOST_CHECK(!last.m_stack.empty());
+    BOOST_CHECK(!last.m_stack.back().empty());
+
+    ScriptTraceUnsetCallback(); // frees the tracer; observer dangles hereafter
+}
+// #endif // ENABLE_SCRIPT_TRACE
+
 BOOST_AUTO_TEST_CASE(logging_tests)
 {
     btck_LoggingOptions logging_options = {
