@@ -1355,6 +1355,68 @@ public:
     }
 };
 
+struct ScriptTraceState
+{
+    std::vector<std::vector<unsigned char>> m_stack;
+    std::vector<std::vector<unsigned char>> m_altstack;
+    std::vector<unsigned char> m_script;
+    std::optional<std::array<unsigned char, 32>> m_tapleaf_hash;
+    uint32_t m_opcode_pos;
+    bool m_exec;
+    uint8_t m_opcode;
+    int m_op_count;
+    btck_SigVersion m_sig_version;
+    uint32_t m_codeseparator_pos;
+
+    explicit ScriptTraceState(const btck_ScriptTraceState& state)
+        : m_script(state.script, state.script + state.script_size),
+          m_opcode_pos{state.opcode_pos},
+          m_exec{state.f_exec != 0},
+          m_opcode{state.opcode},
+          m_op_count{state.op_count},
+          m_sig_version{state.sig_version},
+          m_codeseparator_pos{state.codeseparator_pos}
+    {
+        m_stack.reserve(state.stack_size);
+        for (size_t i = 0; i < state.stack_size; ++i) {
+            m_stack.emplace_back(state.stack_items[i],
+                                 state.stack_items[i] + state.stack_item_sizes[i]);
+        }
+
+        m_altstack.reserve(state.altstack_size);
+        for (size_t i = 0; i < state.altstack_size; ++i) {
+            m_altstack.emplace_back(state.altstack_items[i],
+                                    state.altstack_items[i] + state.altstack_item_sizes[i]);
+        }
+
+        if (state.tapleaf_hash) {
+            m_tapleaf_hash.emplace();
+            std::copy_n(state.tapleaf_hash, 32, m_tapleaf_hash->begin());
+        }
+    }
+};
+
+template <typename T>
+concept ScriptTraceT = requires(T a, ScriptTraceState trace) {
+    { a.ScriptTrace(trace) } -> std::same_as<void>;
+};
+
+template <ScriptTraceT T>
+void ScriptTraceSetCallback(std::unique_ptr<T> trace)
+{
+    if (btck_script_trace_register_callback(
+            trace.release(),
+            +[](void* user_data, const btck_ScriptTraceState* trace) { static_cast<T*>(user_data)->ScriptTrace(ScriptTraceState{*trace}); },
+            +[](void* user_data) { delete static_cast<T*>(user_data); }) != 0) {
+        throw std::runtime_error("Script Tracing is not available. Compile bitcoin kernel with ENABLE_SCRIPT_TRACE");
+    }
+}
+
+inline void ScriptTraceUnsetCallback()
+{
+    btck_script_trace_unregister_callback();
+}
+
 } // namespace btck
 
 #endif // BITCOIN_KERNEL_BITCOINKERNEL_WRAPPER_H

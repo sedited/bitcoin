@@ -1960,6 +1960,75 @@ BITCOINKERNEL_API void btck_block_header_destroy(btck_BlockHeader* header);
 
 ///@}
 
+/** @name ScriptTrace
+ * Functions for script execution tracing.
+ */
+///@{
+
+typedef uint8_t btck_SigVersion;
+#define btck_SigVersion_BASE       ((btck_SigVersion)(0))
+#define btck_SigVersion_WITNESS_V0 ((btck_SigVersion)(1))
+#define btck_SigVersion_TAPROOT    ((btck_SigVersion)(2))
+#define btck_SigVersion_TAPSCRIPT  ((btck_SigVersion)(3))
+
+/**
+ * Snapshot of script execution state passed to the trace callback.
+ */
+typedef struct {
+    const unsigned char* const* stack_items;
+    const size_t* stack_item_sizes;
+    size_t stack_size;
+    const unsigned char* script;
+    size_t script_size;
+    uint32_t opcode_pos;
+    const unsigned char* const* altstack_items;
+    const size_t* altstack_item_sizes;
+    size_t altstack_size;
+    int f_exec;
+    uint8_t opcode;
+    int op_count;
+    uint8_t sig_version;
+    const unsigned char* tapleaf_hash;
+    uint32_t codeseparator_pos;
+} btck_ScriptTraceState;
+
+/**
+ * Callback function type for script trace events.
+ *
+ * Called during script execution with the current execution state.
+ *
+ * @param[in] user_data  User-defined opaque pointer passed through from registration.
+ * @param[in] state      Pointer to the current execution state snapshot.
+ */
+typedef void (*btck_ScriptTraceCallback)(
+    void* user_data,
+    const btck_ScriptTraceState* state
+);
+
+/**
+ * @brief Register a global script trace callback.
+ *
+ * Only one callback can be registered at a time. Registering a new callback
+ * replaces the previous one.
+ *
+ * @param[in] user_data User-defined opaque pointer passed to the callback.
+ * @param[in] callback  The callback function to register.
+ * @return              0 if the script trace feature is available.
+ */
+BITCOINKERNEL_API int btck_script_trace_register_callback(
+    void* user_data,
+    btck_ScriptTraceCallback callback,
+    btck_DestroyCallback user_data_destroy);
+
+/**
+ * @brief Unregister the global script trace callback.
+ *
+ * After calling this function, no script trace callbacks will be invoked.
+ */
+BITCOINKERNEL_API void btck_script_trace_unregister_callback(void);
+
+///@}
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus

@@ -22,6 +22,7 @@
 #include <node/chainstate.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
+#include <script/trace.h>
 #include <script/interpreter.h>
 #include <script/script.h>
 #include <script/verify_flags.h>
@@ -1487,4 +1488,77 @@ int btck_transaction_check(const btck_Transaction* tx, btck_TxValidationState* v
     state = TxValidationState{};
     const bool ok = CheckTransaction(*btck_Transaction::get(tx), state);
     return ok ? 1 : 0;
+}
+
+int btck_script_trace_register_callback(void* user_data, btck_ScriptTraceCallback callback, btck_DestroyCallback destroy)
+{
+#ifndef ENABLE_SCRIPT_TRACE
+    if (destroy) destroy(user_data);
+    return 1;
+#else
+    if (!callback) {
+        if (destroy) destroy(user_data);
+        return 0;
+    }
+
+    std::shared_ptr<void> owned_user_data{user_data, [destroy](void* user_data) {
+        if (destroy) destroy(user_data);
+    }};
+
+    auto wrapper = [owned_user_data, callback](std::span<const std::vector<unsigned char>> stack,
+                            const CScript& script,
+                            uint32_t opcode_pos,
+                            std::span<const std::vector<unsigned char>> altstack,
+                            bool fExec,
+                            uint8_t opcode,
+                            int nOpCount,
+                            uint8_t sigversion,
+                            const unsigned char* tapleaf_hash,
+                            uint32_t codeseparator_pos) {
+        std::vector<const unsigned char*> stack_ptrs;
+        std::vector<size_t> stack_sizes;
+        stack_ptrs.reserve(stack.size());
+        stack_sizes.reserve(stack.size());
+        for (const auto& item : stack) {
+            stack_ptrs.push_back(item.data());
+            stack_sizes.push_back(item.size());
+        }
+
+        std::vector<const unsigned char*> altstack_ptrs;
+        std::vector<size_t> altstack_sizes;
+        altstack_ptrs.reserve(altstack.size());
+        altstack_sizes.reserve(altstack.size());
+        for (const auto& item : altstack) {
+            altstack_ptrs.push_back(item.data());
+            altstack_sizes.push_back(item.size());
+        }
+
+        btck_ScriptTraceState state;
+        state.stack_items = stack_ptrs.data();
+        state.stack_item_sizes = stack_sizes.data();
+        state.stack_size = stack.size();
+        state.script = script.data();
+        state.script_size = script.size();
+        state.opcode_pos = opcode_pos;
+        state.altstack_items = altstack_ptrs.data();
+        state.altstack_item_sizes = altstack_sizes.data();
+        state.altstack_size = altstack.size();
+        state.f_exec = fExec ? 1 : 0;
+        state.opcode = opcode;
+        state.op_count = nOpCount;
+        state.sig_version = sigversion;
+        state.tapleaf_hash = tapleaf_hash;
+        state.codeseparator_pos = codeseparator_pos;
+
+        callback(owned_user_data.get(), &state);
+    };
+
+    RegisterTraceScriptCallback(wrapper);
+    return 0;
+#endif // ENABLE_SCRIPT_TRACE
+}
+
+void btck_script_trace_unregister_callback(void)
+{
+    RegisterTraceScriptCallback(nullptr);
 }
