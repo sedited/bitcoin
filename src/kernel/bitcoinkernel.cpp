@@ -1188,6 +1188,7 @@ void btck_chainstate_manager_destroy(btck_ChainstateManager* chainman)
 
 int btck_chainstate_manager_import_blocks(btck_ChainstateManager* chainman, const char** block_file_paths_data, size_t* block_file_paths_lens, size_t block_file_paths_data_len)
 {
+    assert(block_file_paths_data_len == 0 || (block_file_paths_data != nullptr && block_file_paths_lens != nullptr));
     try {
         std::vector<fs::path> import_files;
         import_files.reserve(block_file_paths_data_len);
