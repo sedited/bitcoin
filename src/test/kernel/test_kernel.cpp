@@ -309,6 +309,7 @@ void CheckHandle(T object, T distinct_object)
     if constexpr (HasToBytes<T>) {
         check_equal(object2.ToBytes(), object3.ToBytes());
     }
+    BOOST_CHECK_THROW(T{object4}, std::runtime_error);
 
     // Self move-assignment must not destroy the held resource.
     // Use a reference to avoid -Wself-move warnings.

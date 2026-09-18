@@ -343,7 +343,7 @@ public:
 
     // Copy constructors
     Handle(const Handle& other)
-        : m_ptr{check(CopyFunc(other.m_ptr))} {}
+        : m_ptr{check(CopyFunc(check(other.m_ptr)))} {}
     Handle& operator=(const Handle& other)
     {
         if (this != &other) {
