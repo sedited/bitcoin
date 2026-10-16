@@ -227,9 +227,6 @@ public:
  * erases their temporary entries when the backend lookup fails, so non-hash keys cannot
  * accumulate.
  *
- * The assumeutxo loader assumes snapshot txids are valid while loading and verifies the
- * complete snapshot's content hash before activation.
- *
  * Hash values are process-local and must not be persisted, serialized, or compared across
  * processes.
  *
@@ -521,8 +518,7 @@ public:
      * Emplace a coin into cacheCoins without performing any checks, marking
      * the emplaced coin as dirty.
      *
-     * NOT FOR GENERAL USE. Used only when loading coins from a UTXO snapshot.
-     * @sa ChainstateManager::PopulateAndValidateSnapshot()
+     * NOT FOR GENERAL USE. Only used by tests to populate a cache directly.
      */
     void EmplaceCoinInternalDANGER(const COutPoint& outpoint, Coin&& coin);
 

@@ -1703,8 +1703,7 @@ private:
      * This data is replicated in each Peer instance we create.
      *
      * This data is not marked const, but after being set it should not
-     * change. Unless AssumeUTXO is started, in which case, the peer
-     * will be limited until the background chain sync finishes.
+     * change.
      *
      * \sa Peer::our_services
      */

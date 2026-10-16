@@ -70,21 +70,6 @@ CCoinsViewDB::~CCoinsViewDB()
     }
 }
 
-void CCoinsViewDB::ResizeCache(size_t new_cache_size)
-{
-    // We can't do this operation with an in-memory DB since we'll lose all the coins upon
-    // reset.
-    if (!m_db_params.memory_only) {
-        LOCK(m_db_mutex);
-        // Have to do a reset first to get the original `m_db` state to release its
-        // filesystem lock.
-        m_db.reset();
-        m_db_params.cache_bytes = new_cache_size;
-        m_db_params.wipe_data = false;
-        m_db = std::make_unique<CDBWrapper>(m_db_params);
-    }
-}
-
 std::optional<Coin> CCoinsViewDB::GetCoin(const COutPoint& outpoint) const
 {
     Coin coin;

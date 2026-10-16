@@ -29,7 +29,6 @@
 #include <utility>
 #include <vector>
 
-using kernel::ChainstateRole;
 
 void TestBlockManager::CleanupForFuzzing()
 {
@@ -44,9 +43,7 @@ void TestChainstateManager::DisableNextWrite()
         void ResetNextWrite() { m_next_write = NodeClock::time_point::max() - 1s; }
     };
     LOCK(::cs_main);
-    for (const auto& cs : m_chainstates) {
-        static_cast<TestChainstate&>(*cs).ResetNextWrite();
-    }
+    static_cast<TestChainstate&>(ActiveChainstate()).ResetNextWrite();
 }
 
 void TestChainstateManager::ResetIbd()
@@ -63,12 +60,11 @@ void TestChainstateManager::JumpOutOfIbd()
 }
 
 void ValidationInterfaceTest::BlockConnected(
-    const ChainstateRole& role,
     CValidationInterface& obj,
     const std::shared_ptr<const CBlock>& block,
     const CBlockIndex* pindex)
 {
-    obj.BlockConnected(role, block, pindex);
+    obj.BlockConnected(block, pindex);
 }
 void TestChainstateManager::InvalidBlockFound(CBlockIndex* pindex, const BlockValidationState& state)
 {

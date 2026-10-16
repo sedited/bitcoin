@@ -24,7 +24,8 @@ BOOST_AUTO_TEST_CASE(getcoinscachesizestate)
     Chainstate& chainstate{m_node.chainman->ActiveChainstate()};
 
     LOCK(::cs_main);
-    BOOST_REQUIRE(chainstate.ResizeCoinsCaches(MAX_COINS_BYTES, /*coinsdb_size=*/1_MiB));
+    // Start from an empty in-memory cache.
+    chainstate.ForceFlushStateToDisk(/*wipe_cache=*/true);
     CCoinsViewCache& view{chainstate.CoinsTip()};
 
     // Sanity: an empty cache should be ≲ 1 chunk (~ 256 KiB).

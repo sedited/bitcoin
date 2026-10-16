@@ -15,7 +15,6 @@
 #include <index/txindex.h>
 #include <index/txospenderindex.h>
 #include <interfaces/chain.h>
-#include <kernel/types.h>
 #include <key.h>
 #include <node/context.h>
 #include <primitives/block.h>
@@ -42,7 +41,6 @@
 #include <utility>
 #include <vector>
 
-using kernel::ChainstateRole;
 
 using IndexFactory = std::function<std::unique_ptr<BaseIndex>(node::NodeContext&)>;
 
@@ -142,7 +140,7 @@ BOOST_FIXTURE_TEST_CASE(index_unclean_shutdown, TestChain100Setup)
             // Send block connected notification, then stop the index without
             // sending a chainstate flushed notification. Prior to #24138, this
             // would cause the index to be corrupted and fail to reload.
-            ValidationInterfaceTest::BlockConnected(ChainstateRole{}, *index, new_block, new_block_index);
+            ValidationInterfaceTest::BlockConnected(*index, new_block, new_block_index);
             index->Stop();
         }
 

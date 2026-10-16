@@ -1414,15 +1414,6 @@ RPCMethod getblockchaininfo()
                 {RPCResult::Type::NUM_TIME, "mediantime", "the median block time expressed in " + UNIX_EPOCH_TIME},
                 {RPCResult::Type::NUM, "verificationprogress", "estimate of verification progress [0..1]"},
                 {RPCResult::Type::BOOL, "initialblockdownload", "(debug information) estimate of whether this node is in Initial Block Download mode"},
-                {RPCResult::Type::OBJ, "backgroundvalidation", /*optional=*/true, "state info regarding background validation process",
-                {
-                    {RPCResult::Type::NUM, "snapshotheight", "the height of the snapshot block. Background validation verifies the chain from genesis up to this height"},
-                    {RPCResult::Type::NUM, "blocks", "the height of the most-work background fully-validated chain. The genesis block has height 0"},
-                    {RPCResult::Type::STR, "bestblockhash", "the hash of the currently best block validated in the background"},
-                    {RPCResult::Type::NUM_TIME, "mediantime", "the median block time expressed in " + UNIX_EPOCH_TIME},
-                    {RPCResult::Type::NUM, "verificationprogress", "estimate of background verification progress [0..1]"},
-                    {RPCResult::Type::STR_HEX, "chainwork", "total amount of work in background validated chain, in hexadecimal"},
-                }},
                 {RPCResult::Type::STR_HEX, "chainwork", "total amount of work in active chain, in hexadecimal"},
                 {RPCResult::Type::NUM, "size_on_disk", "the estimated size of the block and undo files on disk"},
                 {RPCResult::Type::BOOL, "pruned", "if the blocks are subject to pruning"},
@@ -1463,19 +1454,6 @@ RPCMethod getblockchaininfo()
     obj.pushKV("mediantime", tip.GetMedianTimePast());
     obj.pushKV("verificationprogress", chainman.GuessVerificationProgress(&tip));
     obj.pushKV("initialblockdownload", chainman.IsInitialBlockDownload());
-    auto historical_blocks{chainman.GetHistoricalBlockRange()};
-    if (historical_blocks) {
-        UniValue background_validation(UniValue::VOBJ);
-        const CBlockIndex& btip{*CHECK_NONFATAL(historical_blocks->first)};
-        const CBlockIndex& btarget{*CHECK_NONFATAL(historical_blocks->second)};
-        background_validation.pushKV("snapshotheight", btarget.nHeight);
-        background_validation.pushKV("blocks", btip.nHeight);
-        background_validation.pushKV("bestblockhash", btip.GetBlockHash().GetHex());
-        background_validation.pushKV("mediantime", btip.GetMedianTimePast());
-        background_validation.pushKV("chainwork", btip.nChainWork.GetHex());
-        background_validation.pushKV("verificationprogress", chainman.GetBackgroundVerificationProgress(btip));
-        obj.pushKV("backgroundvalidation", std::move(background_validation));
-    }
     obj.pushKV("chainwork", tip.nChainWork.GetHex());
     obj.pushKV("size_on_disk", chainman.m_blockman.CalculateCurrentUsage());
     obj.pushKV("pruned", chainman.m_blockman.IsPruneMode());
@@ -1858,8 +1836,7 @@ static RPCMethod getchaintxstats()
                     {
                         {RPCResult::Type::NUM_TIME, "time", "The timestamp for the final block in the window, expressed in " + UNIX_EPOCH_TIME},
                         {RPCResult::Type::NUM, "txcount", /*optional=*/true,
-                         "The total number of transactions in the chain up to that point, if known. "
-                         "It may be unknown when using assumeutxo."},
+                         "The total number of transactions in the chain up to that point, if known."},
                         {RPCResult::Type::STR_HEX, "window_final_block_hash", "The hash of the final block in the window"},
                         {RPCResult::Type::NUM, "window_final_block_height", "The height of the final block in the window."},
                         {RPCResult::Type::NUM, "window_block_count", "Size of the window in number of blocks"},
@@ -3105,12 +3082,12 @@ static RPCMethod dumptxoutset()
 {
     return RPCMethod{
         "dumptxoutset",
-        "Write the serialized UTXO set to a file. This can be used in loadtxoutset afterwards if this snapshot height is supported in the chainparams as well.\n"
+        "Write the serialized UTXO set to a file.\n"
         "This creates a temporary UTXO database when rolling back, keeping the main chain intact. Should the node experience an unclean shutdown the temporary database may need to be removed from the datadir manually.\n"
         "For deep rollbacks, make sure to use no RPC timeout (bitcoin-cli -rpcclienttimeout=0) as it may take several minutes.",
         {
             {"path", RPCArg::Type::STR, RPCArg::Optional::NO, "Path to the output file. If relative, will be prefixed by datadir."},
-            {"type", RPCArg::Type::STR, RPCArg::Default(""), "The type of snapshot to create. Can be \"latest\" to create a snapshot of the current UTXO set or \"rollback\" to temporarily roll back the state of the node to a historical block before creating the snapshot of a historical UTXO set. This parameter can be omitted if a separate \"rollback\" named parameter is specified indicating the height or hash of a specific historical block. If \"rollback\" is specified and separate \"rollback\" named parameter is not specified, this will roll back to the latest valid snapshot block that can currently be loaded with loadtxoutset."},
+            {"type", RPCArg::Type::STR, RPCArg::Default(""), "The type of snapshot to create. Can be \"latest\" to create a snapshot of the current UTXO set or \"rollback\" to temporarily roll back the state of the node to a historical block before creating the snapshot of a historical UTXO set. This parameter can be omitted if a separate \"rollback\" named parameter is specified indicating the height or hash of a specific historical block. If \"rollback\" is specified, the separate \"rollback\" named parameter must be specified as well."},
             {"options", RPCArg::Type::OBJ_NAMED_PARAMS, RPCArg::Optional::OMITTED, "",
                 {
                     {"rollback", RPCArg::Type::NUM, RPCArg::Optional::OMITTED,
@@ -3133,7 +3110,6 @@ static RPCMethod dumptxoutset()
         },
         RPCExamples{
             HelpExampleCli("-rpcclienttimeout=0 dumptxoutset", "utxo.dat latest") +
-            HelpExampleCli("-rpcclienttimeout=0 dumptxoutset", "utxo.dat rollback") +
             HelpExampleCli("-rpcclienttimeout=0 -named dumptxoutset", R"(utxo.dat rollback=853456)") +
             HelpExampleCli("-rpcclienttimeout=0 -named dumptxoutset", R"(utxo.dat rollback=853456 in_memory=true)")
         },
@@ -3150,10 +3126,7 @@ static RPCMethod dumptxoutset()
         }
         target_index = ParseHashOrHeight(options["rollback"], *node.chainman);
     } else if (snapshot_type == "rollback") {
-        auto snapshot_heights = node.chainman->GetParams().GetAvailableSnapshotHeights();
-        CHECK_NONFATAL(snapshot_heights.size() > 0);
-        auto max_height = std::max_element(snapshot_heights.begin(), snapshot_heights.end());
-        target_index = ParseHashOrHeight(*max_height, *node.chainman);
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Snapshot type \"rollback\" requires the \"rollback\" option specifying the height or hash of the block to roll back to");
     } else if (snapshot_type == "latest") {
         target_index = tip;
     } else {
@@ -3512,160 +3485,6 @@ UniValue CreateUTXOSnapshot(
                              node.rpc_interruption_point);
 }
 
-static RPCMethod loadtxoutset()
-{
-    return RPCMethod{
-        "loadtxoutset",
-        "Load the serialized UTXO set from a file.\n"
-        "Once this snapshot is loaded, its contents will be "
-        "deserialized into a second chainstate data structure, which is then used to sync to "
-        "the network's tip. "
-        "Meanwhile, the original chainstate will complete the initial block download process in "
-        "the background, eventually validating up to the block that the snapshot is based upon.\n\n"
-
-        "The result is a usable bitcoind instance that is current with the network tip in a "
-        "matter of minutes rather than hours. UTXO snapshot are typically obtained from "
-        "third-party sources (HTTP, torrent, etc.) which is reasonable since their "
-        "contents are always checked by hash.\n\n"
-
-        "You can find more information on this process in the `assumeutxo` design "
-        "document (<https://github.com/bitcoin/bitcoin/blob/master/doc/design/assumeutxo.md>).",
-        {
-            {"path",
-                RPCArg::Type::STR,
-                RPCArg::Optional::NO,
-                "path to the snapshot file. If relative, will be prefixed by datadir."},
-        },
-        RPCResult{
-            RPCResult::Type::OBJ, "", "",
-                {
-                    {RPCResult::Type::NUM, "coins_loaded", "the number of coins loaded from the snapshot"},
-                    {RPCResult::Type::STR_HEX, "tip_hash", "the hash of the base of the snapshot"},
-                    {RPCResult::Type::NUM, "base_height", "the height of the base of the snapshot"},
-                    {RPCResult::Type::STR, "path", "the absolute path that the snapshot was loaded from"},
-                }
-        },
-        RPCExamples{
-            HelpExampleCli("-rpcclienttimeout=0 loadtxoutset", "utxo.dat")
-        },
-        [](const RPCMethod& self, const JSONRPCRequest& request) -> UniValue
-{
-    NodeContext& node = EnsureAnyNodeContext(request.context);
-    ChainstateManager& chainman = EnsureChainman(node);
-    const fs::path path{AbsPathForConfigVal(EnsureArgsman(node), fs::u8path(self.Arg<std::string_view>("path")))};
-
-    FILE* file{fsbridge::fopen(path, "rb")};
-    AutoFile afile{file};
-    if (afile.IsNull()) {
-        throw JSONRPCError(
-            RPC_INVALID_PARAMETER,
-            "Couldn't open file " + path.utf8string() + " for reading.");
-    }
-
-    SnapshotMetadata metadata{chainman.GetParams().MessageStart()};
-    try {
-        afile >> metadata;
-    } catch (const std::ios_base::failure& e) {
-        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, strprintf("Unable to parse metadata: %s", e.what()));
-    }
-
-    auto activation_result{chainman.ActivateSnapshot(afile, metadata, false)};
-    if (!activation_result) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, strprintf("Unable to load UTXO snapshot: %s. (%s)", util::ErrorString(activation_result).original, path.utf8string()));
-    }
-
-    // Because we can't provide historical blocks during tip or background sync.
-    // Update local services to reflect we are a limited peer until we are fully sync.
-    node.connman->RemoveLocalServices(NODE_NETWORK);
-    // Setting the limited state is usually redundant because the node can always
-    // provide the last 288 blocks, but it doesn't hurt to set it.
-    node.connman->AddLocalServices(NODE_NETWORK_LIMITED);
-
-    CBlockIndex& snapshot_index{*CHECK_NONFATAL(*activation_result)};
-
-    UniValue result(UniValue::VOBJ);
-    result.pushKV("coins_loaded", metadata.m_coins_count);
-    result.pushKV("tip_hash", snapshot_index.GetBlockHash().ToString());
-    result.pushKV("base_height", snapshot_index.nHeight);
-    result.pushKV("path", fs::PathToString(path));
-    return result;
-},
-    };
-}
-
-const std::vector<RPCResult> RPCHelpForChainstate{
-    {RPCResult::Type::NUM, "blocks", "number of blocks in this chainstate"},
-    {RPCResult::Type::STR_HEX, "bestblockhash", "blockhash of the tip"},
-    {RPCResult::Type::STR_HEX, "bits", "nBits: compact representation of the block difficulty target"},
-    {RPCResult::Type::STR_HEX, "target", "The difficulty target"},
-    {RPCResult::Type::NUM, "difficulty", "difficulty of the tip"},
-    {RPCResult::Type::NUM, "verificationprogress", "progress towards the network tip"},
-    {RPCResult::Type::STR_HEX, "snapshot_blockhash", /*optional=*/true, "the base block of the snapshot this chainstate is based on, if any"},
-    {RPCResult::Type::NUM, "coins_db_cache_bytes", "size of the coinsdb cache"},
-    {RPCResult::Type::NUM, "coins_tip_cache_bytes", "size of the coinstip cache"},
-    {RPCResult::Type::BOOL, "validated", "whether the chainstate is fully validated. True if all blocks in the chainstate were validated, false if the chain is based on a snapshot and the snapshot has not yet been validated."},
-};
-
-static RPCMethod getchainstates()
-{
-return RPCMethod{
-        "getchainstates",
-        "Return information about chainstates.\n",
-        {},
-        RPCResult{
-            RPCResult::Type::OBJ, "", "", {
-                {RPCResult::Type::NUM, "headers", "the number of headers seen so far"},
-                {RPCResult::Type::ARR, "chainstates", "list of the chainstates ordered by work, with the most-work (active) chainstate last", {{RPCResult::Type::OBJ, "", "", RPCHelpForChainstate},}},
-            }
-        },
-        RPCExamples{
-            HelpExampleCli("getchainstates", "")
-    + HelpExampleRpc("getchainstates", "")
-        },
-        [](const RPCMethod& self, const JSONRPCRequest& request) -> UniValue
-{
-    LOCK(cs_main);
-    UniValue obj(UniValue::VOBJ);
-
-    ChainstateManager& chainman = EnsureAnyChainman(request.context);
-
-    auto make_chain_data = [&](const Chainstate& cs) EXCLUSIVE_LOCKS_REQUIRED(::cs_main) {
-        AssertLockHeld(::cs_main);
-        UniValue data(UniValue::VOBJ);
-        if (!cs.m_chain.Tip()) {
-            return data;
-        }
-        const CChain& chain = cs.m_chain;
-        const CBlockIndex* tip = chain.Tip();
-
-        data.pushKV("blocks", chain.Height());
-        data.pushKV("bestblockhash",         tip->GetBlockHash().GetHex());
-        data.pushKV("bits", strprintf("%08x", tip->nBits));
-        data.pushKV("target", GetTarget(*tip, chainman.GetConsensus().powLimit).GetHex());
-        data.pushKV("difficulty", GetDifficulty(*tip));
-        data.pushKV("verificationprogress", chainman.GuessVerificationProgress(tip));
-        data.pushKV("coins_db_cache_bytes",  cs.m_coinsdb_cache_size_bytes);
-        data.pushKV("coins_tip_cache_bytes", cs.m_coinstip_cache_size_bytes);
-        if (cs.m_from_snapshot_blockhash) {
-            data.pushKV("snapshot_blockhash", cs.m_from_snapshot_blockhash->ToString());
-        }
-        data.pushKV("validated", cs.m_assumeutxo == Assumeutxo::VALIDATED);
-        return data;
-    };
-
-    obj.pushKV("headers", chainman.m_best_header ? chainman.m_best_header->nHeight : -1);
-    UniValue obj_chainstates{UniValue::VARR};
-    if (const Chainstate * cs{chainman.HistoricalChainstate()}) {
-        obj_chainstates.push_back(make_chain_data(*cs));
-    }
-    obj_chainstates.push_back(make_chain_data(chainman.CurrentChainstate()));
-    obj.pushKV("chainstates", std::move(obj_chainstates));
-    return obj;
-}
-    };
-}
-
-
 void RegisterBlockchainRPCCommands(CRPCTable& t)
 {
     static const CRPCCommand commands[]{
@@ -3691,8 +3510,6 @@ void RegisterBlockchainRPCCommands(CRPCTable& t)
         {"blockchain", &getdescriptoractivity},
         {"blockchain", &getblockfilter},
         {"blockchain", &dumptxoutset},
-        {"blockchain", &loadtxoutset},
-        {"blockchain", &getchainstates},
         {"hidden", &invalidateblock},
         {"hidden", &reconsiderblock},
         {"blockchain", &waitfornewblock},
