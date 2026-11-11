@@ -49,7 +49,7 @@ threads take up 8MiB for the thread stack on a 64-bit system, and 4MiB in a
 
 - `-par=<n>` - the number of script verification threads, defaults to the number of cores in the system minus one.
 - `-rpcthreads=<n>` - the number of threads used for processing RPC requests, defaults to `16`.
-- `-prevoutfetchthreads=<n>` - the number of threads used to fetch block input prevouts, defaults to `8`.
+- `-prevoutfetchthreads=<n>` - the number of connect pool threads, which validate blocks in parallel during initial block download and fetch block input prevouts at the tip, defaults to the number of cores in the system, at least `2`. During initial block download up to twice as many blocks as there are threads are held in memory, so a lower value also reduces that.
 
 ## Linux specific
 

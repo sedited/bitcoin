@@ -100,7 +100,7 @@ inline constexpr int MAX_SCRIPTCHECK_THREADS{15};
 inline constexpr int MAX_BLOCKHASH_THREADS{4};
 
 /** Maximum number of dedicated threads allowed for prefetching block input prevouts */
-inline constexpr int32_t MAX_PREVOUTFETCH_THREADS{32};
+inline constexpr int32_t MAX_PREVOUTFETCH_THREADS{1024};
 //! The most blocks the connect window validates at once (-connectwindow); one batch of ActivateBestChain.
 inline constexpr int MAX_CONNECT_WINDOW{64};
 
