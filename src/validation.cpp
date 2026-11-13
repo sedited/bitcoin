@@ -4444,14 +4444,11 @@ bool Chainstate::ActivateBestChain(BlockValidationState& state, std::shared_ptr<
                             reorg_lock_main.emplace(::cs_main, "cs_main", __FILE__, __LINE__);
                             if (m_mempool) reorg_lock_mempool.emplace(m_mempool->cs, "m_mempool->cs", __FILE__, __LINE__);
                         }
-                        // The window: in initial block download, extending the tip, once BIP34 has made
-                        // duplicate transactions impossible (below that height a block's BIP30 check reads
-                        // the view, and could see a coin a lower block in flight spends).
+                        // The window: in initial block download, extending the tip.
                         // A block that failed in the window is connected alone, in a step of its own
                         // (PublishConnectTip()).
                         const bool retry{std::exchange(m_window_retry_serial, false)};
-                        step->use_window = !retry && was_in_ibd && !step->blocks_disconnected && m_chainman.ConnectWindow() > 1 &&
-                                           m_chain.Height() >= m_chainman.GetConsensus().BIP34Height;
+                        step->use_window = !retry && was_in_ibd && !step->blocks_disconnected && m_chainman.ConnectWindow() > 1;
                         if (step->use_window) step->sync = std::make_shared<WindowSync>();
                     }
 
