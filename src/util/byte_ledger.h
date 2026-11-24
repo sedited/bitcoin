@@ -36,7 +36,10 @@ namespace util {
  * an undo write, and 64 MiB of undo backlog. Beside that sum, with no limit
  * in bytes: one block message, and the block a task makes of it, for each
  * connect pool worker but one, and the free nodes of the coin
- * store's regions, which the coins cache has counted at its largest.
+ * store's regions, which the coins cache has counted at its largest. During
+ * a reorganisation only, the blocks it disconnects, read ahead of its hold
+ * with their undo data (ReorgReads in validation.cpp), at most
+ * REORG_READ_AHEAD of them.
  */
 enum class ByteAccountId : uint8_t {
     //! Accepted blocks kept until they are connected (node::BlockCache), as measured. Limit: its budget.
